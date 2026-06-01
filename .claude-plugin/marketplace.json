@@ -9,53 +9,29 @@
     {
       "name": "clip",
       "description": "텍스트 각 줄의 오른쪽 공백을 제거(rstrip)해 tmp/clipboard.txt에 저장한다.",
+      "source": "./plugins/clip",
       "category": "productivity",
-      "source": {
-        "source": "git-subdir",
-        "url": "metaontology/claude-code-plugins",
-        "path": "plugins/clip",
-        "ref": "main",
-        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
-      },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/clip"
     },
     {
       "name": "history",
       "description": "Claude Code 세션의 대화 기록을 프로젝트 .history/ 폴더에 저장·관리한다.",
+      "source": "./plugins/history",
       "category": "productivity",
-      "source": {
-        "source": "git-subdir",
-        "url": "metaontology/claude-code-plugins",
-        "path": "plugins/history",
-        "ref": "main",
-        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
-      },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/history"
     },
     {
       "name": "repo-scanner",
       "description": "GitHub 레포지터리를 deepwiki.com에서 분석하고 HTML 치트시트, PNG 스크린샷, Markdown 요약 파일을 export/ 폴더에 생성한다.",
+      "source": "./plugins/repo-scanner",
       "category": "developer-tools",
-      "source": {
-        "source": "git-subdir",
-        "url": "metaontology/claude-code-plugins",
-        "path": "plugins/repo-scanner",
-        "ref": "main",
-        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
-      },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/repo-scanner"
     },
     {
       "name": "dash-statusline",
       "description": "Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 4~5줄로 출력하는 statusline 렌더러.",
+      "source": "./plugins/dash-statusline",
       "category": "ui",
-      "source": {
-        "source": "git-subdir",
-        "url": "metaontology/claude-code-plugins",
-        "path": "plugins/dash-statusline",
-        "ref": "main",
-        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
-      },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/dash-statusline"
     }
   ]
