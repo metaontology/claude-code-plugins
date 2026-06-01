@@ -5,40 +5,58 @@
     "name": "metaontology",
     "email": "webontology@gmail.com"
   },
-  "repository": "https://github.com/metaontology/claude-code-plugins",
-  "version": "1.0.0",
   "plugins": [
     {
       "name": "clip",
-      "type": "skill",
-      "description": "텍스트 각 줄의 오른쪽 공백을 제거(rstrip)해 tmp/clipboard.txt에 저장한다. Claude Code 화면에서 복사 시 오른쪽 공백이 채워지는 문제를 해결한다.",
-      "usage": "/clip <텍스트>",
-      "path": "plugins/skills/clip",
-      "entry": "SKILL.md"
+      "description": "텍스트 각 줄의 오른쪽 공백을 제거(rstrip)해 tmp/clipboard.txt에 저장한다.",
+      "category": "productivity",
+      "source": {
+        "source": "git-subdir",
+        "url": "metaontology/claude-code-plugins",
+        "path": "plugins/clip",
+        "ref": "main",
+        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+      },
+      "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/clip"
     },
     {
       "name": "history",
-      "type": "skill",
-      "description": "Claude Code 세션의 대화 기록을 프로젝트 .history/ 폴더에 저장·관리한다. SESSION.md, AUTO-MEMORY.md, user-prompts.md를 생성한다.",
-      "usage": "/history | /history all | /history del | /history del <세션ID>",
-      "path": "plugins/skills/history",
-      "entry": "skill.md"
+      "description": "Claude Code 세션의 대화 기록을 프로젝트 .history/ 폴더에 저장·관리한다.",
+      "category": "productivity",
+      "source": {
+        "source": "git-subdir",
+        "url": "metaontology/claude-code-plugins",
+        "path": "plugins/history",
+        "ref": "main",
+        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+      },
+      "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/history"
     },
     {
       "name": "repo-scanner",
-      "type": "skill",
       "description": "GitHub 레포지터리를 deepwiki.com에서 분석하고 HTML 치트시트, PNG 스크린샷, Markdown 요약 파일을 export/ 폴더에 생성한다.",
-      "usage": "/repo-scanner <github-url>",
-      "path": "plugins/skills/repo-scanner",
-      "entry": "SKILL.md"
+      "category": "developer-tools",
+      "source": {
+        "source": "git-subdir",
+        "url": "metaontology/claude-code-plugins",
+        "path": "plugins/repo-scanner",
+        "ref": "main",
+        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+      },
+      "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/repo-scanner"
     },
     {
       "name": "dash-statusline",
-      "type": "statusline",
       "description": "Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 4~5줄로 출력하는 statusline 렌더러.",
-      "usage": "Claude Code statusline 설정에서 지정",
-      "path": "plugins/statusline/dash-statusline",
-      "entry": "main.py"
+      "category": "ui",
+      "source": {
+        "source": "git-subdir",
+        "url": "metaontology/claude-code-plugins",
+        "path": "plugins/dash-statusline",
+        "ref": "main",
+        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+      },
+      "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/dash-statusline"
     }
   ]
 }

@@ -1,0 +1,8 @@
+{
+  "name": "repo-scanner",
+  "description": "GitHub 레포지터리를 deepwiki.com에서 분석하고 HTML 치트시트, PNG 스크린샷, Markdown 요약 파일을 export/ 폴더에 생성한다.",
+  "version": "1.0.0",
+  "author": {
+    "name": "metaontology"
+  }
+}
