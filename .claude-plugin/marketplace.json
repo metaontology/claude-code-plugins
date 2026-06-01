@@ -15,7 +15,7 @@
         "url": "metaontology/claude-code-plugins",
         "path": "plugins/clip",
         "ref": "main",
-        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
       },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/clip"
     },
@@ -28,7 +28,7 @@
         "url": "metaontology/claude-code-plugins",
         "path": "plugins/history",
         "ref": "main",
-        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
       },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/history"
     },
@@ -41,7 +41,7 @@
         "url": "metaontology/claude-code-plugins",
         "path": "plugins/repo-scanner",
         "ref": "main",
-        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
       },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/repo-scanner"
     },
@@ -54,7 +54,7 @@
         "url": "metaontology/claude-code-plugins",
         "path": "plugins/dash-statusline",
         "ref": "main",
-        "sha": "12fbd4528946960c752696c560ced94f3a8265b1"
+        "sha": "154605a3ff9021478fd2dd7ad911693186c14cbe"
       },
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/dash-statusline"
     }
