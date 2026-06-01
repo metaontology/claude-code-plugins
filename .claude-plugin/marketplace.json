@@ -1,5 +1,10 @@
 {
-  "marketplace": "claude-code-plugins",
+  "name": "metaontology-claude-code-plugins",
+  "description": "Metaontology Claude Code Plugin Marketplace",
+  "owner": {
+    "name": "metaontology",
+    "email": "webontology@gmail.com"
+  },
   "repository": "https://github.com/metaontology/claude-code-plugins",
   "version": "1.0.0",
   "plugins": [
