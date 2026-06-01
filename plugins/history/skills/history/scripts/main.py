@@ -71,6 +71,9 @@ def run_delete_list_checked(session_id: str):
 
 def run_delete_confirmed(session_id: str, target_ids: list[str]):
     """target_ids 세션을 실제 삭제하고 SESSION.md를 갱신한다."""
+    if not target_ids:
+        print("ERROR: --confirm 뒤에 세션 ID가 없습니다. 'del --confirm {uuid} ...' 형식으로 실행하세요.", file=sys.stderr)
+        sys.exit(1)
     slug = find_project_slug(session_id)
     if not slug:
         print("ERROR: project slug 탐색 실패", file=sys.stderr)
