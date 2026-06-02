@@ -28,8 +28,35 @@ description: 현재 세션의 모든 user prompt, skill 호출, 로컬 커맨드
 cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" $ARGUMENTS
 ```
 
-`/history del` 및 `/history del {세션ID}`:
+`/history del` (체크박스):
 
-`references/session.md`의 확인 흐름에 따라 처리한다. 두 단계로 진행:
-1. Python dry-run으로 대상 확인
-2. 사용자 확인 후 `--confirm`으로 실제 삭제 실행
+1. dry-run 실행:
+   ```sh
+   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del
+   ```
+2. 출력 첫 줄이 `CHECKED_NONE` → "체크 항목 없음. SESSION.md에서 삭제할 세션에 `x` 표시 후 재실행하세요." 종료.
+3. 출력 첫 줄이 `INCLUDES_CURRENT row={n} sid={8자리} name={세션명}` →
+   **반드시 아래 형식 그대로** 출력 후 종료:
+   > "{n}번째 항목 '{세션명}' ({8자리})은 현재 세션이므로 삭제할 수 없습니다. 체크를 해제 후 다시 실행하세요."
+4. 출력 첫 줄이 `CHECKED_LIST` → 이후 줄의 UUID 목록으로 사용자에게 확인 요청:
+   > "다음 N개 세션을 삭제하시겠습니까?\n- {sid[:8]} ...\n(y/N)"
+5. `y` 확인 시 삭제 실행:
+   ```sh
+   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del --confirm {sid1} {sid2} ...
+   ```
+6. 결과 출력 후 종료.
+
+`/history del {세션ID}` (단일):
+
+1. dry-run 실행:
+   ```sh
+   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del {세션ID}
+   ```
+2. 출력이 `NOT_FOUND` → "세션 `{세션ID}`를 찾을 수 없습니다." 종료.
+3. 출력이 `IS_CURRENT_SESSION {full_uuid}` → "현재 세션은 삭제할 수 없습니다." 종료.
+4. 출력이 `FOUND {full_uuid}` → "세션 `{세션ID}`를 삭제하시겠습니까? (y/N)"
+5. `y` 확인 시 삭제 실행:
+   ```sh
+   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del --confirm {full_uuid}
+   ```
+6. 결과 출력 후 종료.
