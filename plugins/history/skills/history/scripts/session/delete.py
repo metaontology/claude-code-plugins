@@ -48,6 +48,12 @@ def find_full_id_by_prefix(prefix: str, slug: str) -> str | None:
     return None
 
 
+def filter_current_session(session_ids: list[str], current_id: str) -> tuple[list[str], bool]:
+    """current_id를 목록에서 제외하고, 포함 여부(skipped)를 반환한다."""
+    filtered = [sid for sid in session_ids if sid != current_id]
+    return filtered, len(filtered) < len(session_ids)
+
+
 def delete_sessions(session_ids: list[str], slug: str, history_dir: Path) -> list[str]:
     """지정된 세션의 jsonl 파일과 .history/user-prompts/{sid}/ 디렉토리를 삭제한다.
 

@@ -18,7 +18,7 @@ from pathlib import Path
 
 from common.jsonl import find_project_slug, all_jsonls_in_slug, find_jsonl
 from session.builder import build_session_md
-from session.delete import list_checked, find_full_id_by_prefix, delete_sessions
+from session.delete import list_checked, find_full_id_by_prefix, delete_sessions, filter_current_session
 from auto_mem.builder import build_auto_mem_md
 from user_prompt.builder import write_user_prompts
 
@@ -66,11 +66,14 @@ def run_delete_list_checked(session_id: str):
     """
     session_md = HISTORY_DIR / "SESSION.md"
     checked = list_checked(session_md)
-    if not checked:
+    filtered, skipped = filter_current_session(checked, session_id)
+    if skipped:
+        print(f"SKIPPED_CURRENT {session_id}")
+    if not filtered:
         print("CHECKED_NONE")
     else:
         print("CHECKED_LIST")
-        for sid in checked:
+        for sid in filtered:
             print(sid)
 
 
@@ -83,7 +86,10 @@ def run_delete_confirmed(session_id: str, target_ids: list[str]):
     if not slug:
         print("ERROR: project slug 탐색 실패", file=sys.stderr)
         sys.exit(1)
-    deleted = delete_sessions(target_ids, slug, HISTORY_DIR)
+    safe_ids, skipped = filter_current_session(target_ids, session_id)
+    if skipped:
+        print(f"WARN: 현재 세션({session_id[:8]})은 삭제 목록에서 제외되었습니다.")
+    deleted = delete_sessions(safe_ids, slug, HISTORY_DIR)
     session_md_content = build_session_md(slug, session_id, HISTORY_DIR, all_sessions=False)
     (HISTORY_DIR / "SESSION.md").write_text(session_md_content, encoding="utf-8")
     for sid in deleted:
