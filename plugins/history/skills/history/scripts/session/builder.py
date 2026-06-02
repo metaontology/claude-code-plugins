@@ -50,6 +50,7 @@ def build_session_md(slug: str, current_session_id: str, history_dir: Path, all_
         "# SESSION.md\n",
         f"원본 경로: `{paths.PROJECTS_DIR / slug}`\n",
         "> `/history` — 현재 세션만 갱신 · `/history all` — 모든 세션 갱신\n",
+        "> 삭제할 세션은 🗑️ 열에 `x` 표시 후 `/history del` 실행\n",
         "---\n",
         "| 🗑️ | 생성일시 | 세션 ID | 세션명 | 설명 |",
         "|---|----------|---------|--------|------|",
