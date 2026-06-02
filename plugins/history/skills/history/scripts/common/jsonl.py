@@ -54,16 +54,22 @@ def parse_jsonl(path: Path) -> list[dict]:
 
 
 def get_session_meta(records: list[dict]) -> dict:
-    """레코드 목록에서 첫 timestamp와 ai-title을 추출해 반환.
+    """레코드 목록에서 첫 timestamp와 세션 제목을 추출해 반환.
 
-    ai-title 레코드가 없으면 첫 번째 사용자 텍스트 메시지 앞 60자를 fallback으로 사용한다.
+    제목 우선순위:
+    1. custom-title — /rename으로 사용자가 직접 지정한 이름 (마지막 값 사용)
+    2. ai-title — Claude가 자동 생성한 제목 (첫 번째 값 사용)
+    3. fallback — 첫 번째 사용자 텍스트 메시지 앞 60자
     """
-    ts, ai_title, first_user_text = "", "", ""
+    ts, ai_title, custom_title, first_user_text = "", "", "", ""
     for d in records:
         if not ts and d.get("timestamp"):
             ts = d["timestamp"]
         if d.get("type") == "ai-title" and not ai_title:
             ai_title = d.get("aiTitle", "")
+        if d.get("type") == "custom-title":
+            # /rename은 여러 번 실행될 수 있으므로 마지막 값으로 덮어씀
+            custom_title = d.get("customTitle", "")
         # ai-title fallback: 첫 번째 일반 사용자 텍스트 메시지 수집
         if not first_user_text and d.get("type") == "user":
             msg = d.get("message", {})
@@ -85,8 +91,9 @@ def get_session_meta(records: list[dict]) -> dict:
                         and "<local-command-caveat>" not in text):
                     first_user_text = text
 
-    if not ai_title and first_user_text:
+    title = custom_title or ai_title
+    if not title and first_user_text:
         # 줄바꿈 제거 후 60자 제한
-        ai_title = first_user_text.replace("\n", " ")[:60]
+        title = first_user_text.replace("\n", " ")[:60]
 
-    return {"ts": ts, "ai_title": ai_title}
+    return {"ts": ts, "ai_title": title}

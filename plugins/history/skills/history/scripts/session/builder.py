@@ -19,6 +19,7 @@ def build_session_md(slug: str, current_session_id: str, history_dir: Path, all_
         records = parse_jsonl(jpath)
         meta = get_session_meta(records)
         ts_str = meta["ts"]
+        # custom-title(/rename) → ai-title → fallback 순 우선순위는 get_session_meta에서 처리됨
         ai_title = meta["ai_title"] or "(제목 없음)"
 
         if ts_str:
