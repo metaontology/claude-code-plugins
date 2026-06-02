@@ -52,7 +52,10 @@ def extract_entries(records: list[dict]) -> list[dict]:
                 continue
 
             # skill 로딩 시 Claude에게 전달되는 메시지 제외
-            if "Base directory for this skill:" in text and "다음 명령을 실행" in text:
+            # NOTE: "Base directory for this skill:" 마커로 감지.
+            # 향후 Claude Code가 스킬 주입 포맷을 변경하면 이 마커가 없는 메시지가
+            # user-prompts.md에 그대로 기록될 수 있으므로 포맷 변경 시 재검토 필요.
+            if "Base directory for this skill:" in text:
                 continue
 
             # local-command-caveat 태그 제거

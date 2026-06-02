@@ -6,6 +6,11 @@
     python main.py del          # SESSION.md 체크 항목 dry-run 출력
     python main.py del {id}     # 단일 세션 존재 확인 dry-run
     python main.py del --confirm {id} [{id} ...]  # 실제 삭제 실행
+
+[유지보수 주의]
+user_prompt/builder.py의 스킬 주입 메시지 필터는 "Base directory for this skill:" 마커에
+의존한다. Claude Code가 스킬 주입 포맷을 변경하면 SKILL.md 내용이 user-prompts.md에
+그대로 기록될 수 있다 — 포맷 변경 시 extract_entries() 필터 재검토 필요.
 """
 import os
 import sys
