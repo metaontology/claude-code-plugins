@@ -7,6 +7,10 @@
 
 원본 경로: `C:\Users\jun\.claude\projects\{프로젝트-슬러그}`
 
+> `/history` — 현재 세션만 갱신 · `/history all` — 모든 세션 갱신
+
+> 삭제할 세션은 🗑️ 열에 `x` 표시 후 `/history del` 실행
+
 ---
 ```
 
