@@ -24,20 +24,31 @@ def list_checked(session_md_path: Path) -> list[str]:
     파일이 없거나 체크 항목이 없으면 빈 리스트 반환.
     셀에 어떤 문자든 입력되어 있으면 삭제 대상으로 인식 (x, [x], v, ✓ 등).
     """
+    return [entry["sid"] for entry in list_checked_with_meta(session_md_path)]
+
+
+def list_checked_with_meta(session_md_path: Path) -> list[dict]:
+    """SESSION.md에서 체크된 행의 메타 정보 목록 반환.
+
+    반환 항목: {"row": int(1-based 데이터 행 번호), "sid": str, "name": str}
+    파일이 없거나 체크 항목이 없으면 빈 리스트 반환.
+    """
     if not session_md_path.exists():
         return []
-    checked = []
+    result = []
+    data_row = 0
     for line in session_md_path.read_text(encoding="utf-8").splitlines():
         parts = [p.strip() for p in line.split("|")]
         if len(parts) < 5:
             continue
         checkbox_col = parts[1]
-        if not checkbox_col:
-            continue
         sid = parse_session_id_from_cell(parts[3])
         if sid:
-            checked.append(sid)
-    return checked
+            data_row += 1
+            if checkbox_col:
+                name = parts[4] if len(parts) > 4 else ""
+                result.append({"row": data_row, "sid": sid, "name": name})
+    return result
 
 
 def find_full_id_by_prefix(prefix: str, slug: str) -> str | None:
@@ -48,10 +59,9 @@ def find_full_id_by_prefix(prefix: str, slug: str) -> str | None:
     return None
 
 
-def filter_current_session(session_ids: list[str], current_id: str) -> tuple[list[str], bool]:
-    """current_id를 목록에서 제외하고, 포함 여부(skipped)를 반환한다."""
-    filtered = [sid for sid in session_ids if sid != current_id]
-    return filtered, len(filtered) < len(session_ids)
+def contains_current_session(session_ids: list[str], current_id: str) -> bool:
+    """session_ids에 current_id가 포함되어 있으면 True를 반환한다."""
+    return current_id in session_ids
 
 
 def delete_sessions(session_ids: list[str], slug: str, history_dir: Path) -> list[str]:

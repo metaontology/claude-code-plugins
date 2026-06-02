@@ -18,7 +18,7 @@ from pathlib import Path
 
 from common.jsonl import find_project_slug, all_jsonls_in_slug, find_jsonl
 from session.builder import build_session_md
-from session.delete import list_checked, find_full_id_by_prefix, delete_sessions, filter_current_session
+from session.delete import list_checked, list_checked_with_meta, find_full_id_by_prefix, delete_sessions, contains_current_session
 from auto_mem.builder import build_auto_mem_md
 from user_prompt.builder import write_user_prompts
 
@@ -65,16 +65,17 @@ def run_delete_list_checked(session_id: str):
         CHECKED_LIST              — 체크 항목 있음 (이후 줄에 UUID 목록)
     """
     session_md = HISTORY_DIR / "SESSION.md"
-    checked = list_checked(session_md)
-    filtered, skipped = filter_current_session(checked, session_id)
-    if skipped:
-        print(f"SKIPPED_CURRENT {session_id}")
-    if not filtered:
+    entries = list_checked_with_meta(session_md)
+    if not entries:
         print("CHECKED_NONE")
-    else:
-        print("CHECKED_LIST")
-        for sid in filtered:
-            print(sid)
+        return
+    current_entry = next((e for e in entries if e["sid"] == session_id), None)
+    if current_entry:
+        print(f"INCLUDES_CURRENT row={current_entry['row']} sid={session_id[:8]} name={current_entry['name']}")
+        return
+    print("CHECKED_LIST")
+    for e in entries:
+        print(e["sid"])
 
 
 def run_delete_confirmed(session_id: str, target_ids: list[str]):
@@ -82,14 +83,14 @@ def run_delete_confirmed(session_id: str, target_ids: list[str]):
     if not target_ids:
         print("ERROR: --confirm 뒤에 세션 ID가 없습니다. 'del --confirm {uuid} ...' 형식으로 실행하세요.", file=sys.stderr)
         sys.exit(1)
+    if contains_current_session(target_ids, session_id):
+        print(f"ERROR: 현재 세션({session_id[:8]})이 삭제 목록에 포함되어 있어 실행이 중단되었습니다.", file=sys.stderr)
+        sys.exit(1)
     slug = find_project_slug(session_id)
     if not slug:
         print("ERROR: project slug 탐색 실패", file=sys.stderr)
         sys.exit(1)
-    safe_ids, skipped = filter_current_session(target_ids, session_id)
-    if skipped:
-        print(f"WARN: 현재 세션({session_id[:8]})은 삭제 목록에서 제외되었습니다.")
-    deleted = delete_sessions(safe_ids, slug, HISTORY_DIR)
+    deleted = delete_sessions(target_ids, slug, HISTORY_DIR)
     session_md_content = build_session_md(slug, session_id, HISTORY_DIR, all_sessions=False)
     (HISTORY_DIR / "SESSION.md").write_text(session_md_content, encoding="utf-8")
     for sid in deleted:
@@ -110,10 +111,13 @@ def run_delete_check_single(session_id: str, target: str):
         return
     # 8자리 이하 prefix면 full UUID 탐색, 그 이상이면 full UUID로 간주
     full_id = find_full_id_by_prefix(target, slug) if len(target) <= 8 else target
-    if full_id and find_jsonl(full_id) is not None:
-        print(f"FOUND {full_id}")
-    else:
+    if not full_id or find_jsonl(full_id) is None:
         print("NOT_FOUND")
+        return
+    if full_id == session_id:
+        print(f"IS_CURRENT_SESSION {full_id}")
+        return
+    print(f"FOUND {full_id}")
 
 
 def main():

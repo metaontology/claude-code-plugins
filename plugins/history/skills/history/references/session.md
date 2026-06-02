@@ -33,10 +33,11 @@
 `/history del` (인수 없음) 실행 시:
 
 1. `python "$SKILL_DIR/scripts/main.py" del` 실행
-2. 출력에 `SKIPPED_CURRENT {uuid}` 줄이 있으면:
-   > "현재 세션({uuid[:8]})은 진행 중이므로 삭제 목록에서 자동 제외됩니다."
-3. 출력이 `CHECKED_NONE`이면:
+2. 출력이 `CHECKED_NONE`이면:
    > "체크 항목 없음. SESSION.md에서 삭제할 세션에 `[x]` 체크 후 `/history del`을 재실행하세요."
+   종료.
+3. 출력이 `INCLUDES_CURRENT row={n} sid={8자리} name={세션명}`이면:
+   > "{n}번째 항목 '{세션명}' ({8자리})은 현재 세션이므로 삭제할 수 없습니다. 체크를 해제 후 다시 실행하세요."
    종료.
 4. 출력이 `CHECKED_LIST`이면 이후 줄의 UUID 목록을 읽어 사용자에게 표시:
    > "다음 N개 세션을 삭제하시겠습니까?
@@ -56,10 +57,13 @@
 2. 출력이 `NOT_FOUND`이면:
    > "세션 `{세션ID}`를 찾을 수 없습니다."
    종료.
-3. 출력이 `FOUND {full_uuid}`이면:
+3. 출력이 `IS_CURRENT_SESSION {full_uuid}`이면:
+   > "현재 세션은 삭제할 수 없습니다."
+   종료.
+4. 출력이 `FOUND {full_uuid}`이면:
    > "세션 `{세션ID}`를 삭제하시겠습니까? (y/N)"
-4. `y` 확인 시:
+5. `y` 확인 시:
    ```sh
    CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del --confirm {full_uuid}
    ```
-5. 결과 출력 후 종료.
+6. 결과 출력 후 종료.
