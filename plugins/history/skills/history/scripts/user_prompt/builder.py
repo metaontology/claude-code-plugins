@@ -65,11 +65,11 @@ def extract_entries(records: list[dict]) -> list[dict]:
 
             # ── 슬래시 커맨드 ──────────────────────────────────────────────
             # <command-name> 태그가 있으면 슬래시 커맨드로 처리한다.
-            # command-name 원본은 네임스페이스 포함 (/history:history) 이므로
-            # /[^:<\s]+ 패턴으로 : 이전 부분만 추출해 /history 형태로 저장한다.
-            # command-args가 있으면 공백으로 이어 붙인다: /history all
+            # command-name 원본을 그대로 사용한다 (/history:history, /superpowers:brainstorming 등).
+            # namespace 제거를 하면 /superpowers:brainstorming → /superpowers 처럼 정보 손실 발생.
+            # command-args가 있으면 공백으로 이어 붙인다: /history:history all
             if "<command-name>" in text:
-                cmd_match = re.search(r"<command-name>(/[^:<\s]+)", text)
+                cmd_match = re.search(r"<command-name>(/\S+)</command-name>", text)
                 args_match = re.search(r"<command-args>(.*?)</command-args>", text, re.DOTALL)
                 if cmd_match:
                     cmd = cmd_match.group(1)
