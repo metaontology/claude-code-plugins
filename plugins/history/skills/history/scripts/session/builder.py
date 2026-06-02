@@ -55,6 +55,6 @@ def build_session_md(slug: str, current_session_id: str, history_dir: Path, all_
         "|---|----------|---------|--------|------|",
     ]
     for created_at, sid, link, session_name, description in rows:
-        lines.append(f"| [ ] | {created_at} | {link} | {session_name} | {description} |")
+        lines.append(f"|  | {created_at} | {link} | {session_name} | {description} |")
 
     return "\n".join(lines) + "\n"

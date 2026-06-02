@@ -19,10 +19,10 @@ def parse_session_id_from_cell(cell: str) -> str | None:
 
 
 def list_checked(session_md_path: Path) -> list[str]:
-    """SESSION.md에서 [x] 체크된 행의 full UUID 목록 반환.
+    """SESSION.md에서 삭제 컬럼이 비어있지 않은 행의 full UUID 목록 반환.
 
     파일이 없거나 체크 항목이 없으면 빈 리스트 반환.
-    대소문자 무관([x], [X] 모두 인식).
+    셀에 어떤 문자든 입력되어 있으면 삭제 대상으로 인식 (x, [x], v, ✓ 등).
     """
     if not session_md_path.exists():
         return []
@@ -32,7 +32,7 @@ def list_checked(session_md_path: Path) -> list[str]:
         if len(parts) < 5:
             continue
         checkbox_col = parts[1]
-        if not re.match(r'\[x\]', checkbox_col, re.IGNORECASE):
+        if not checkbox_col:
             continue
         sid = parse_session_id_from_cell(parts[3])
         if sid:
