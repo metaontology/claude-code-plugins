@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2026-06-16
+
+### Changed
+- `statuses/effort`: effort level 우측에 정량 점수 표시 (`low x0` / `medium x25` / `high x50` / `xhigh x75` / `max 🔥100`)
+
 ## [1.1.0] - 2026-06-16
 
 ### Added
