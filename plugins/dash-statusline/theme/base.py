@@ -12,6 +12,8 @@ class ColorPalette:
     accent: str
     highlight: str
     orange: str
+    blue: str
+    purple_red: str
     reset: str
 
 

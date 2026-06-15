@@ -22,7 +22,7 @@ if sys.platform == 'win32':
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
     sys.stdin = open(sys.stdin.fileno(), mode='r', encoding='utf-8')
 
-from statuses import context, model, path, git, tools, report, lang
+from statuses import context, model, path, git, tools, report, lang, rate_limits
 from theme import load_theme
 from views import select_view
 
@@ -87,6 +87,15 @@ except Exception:
         f'🧩 {palette.ok}{"█" * 13}{palette.reset}'
         f' 0% | {palette.orange}$0.00{palette.reset} | 🕒 0m 0s'
     )
+
+# --- 1줄 suffix: rate limits (구독이면 표시, API key면 생략) ---
+try:
+    rl_data = rate_limits.parse(raw)
+    rendered_rl = rate_limits.render(rl_data, palette, view.style)
+except Exception:
+    rendered_rl = ''
+
+rendered_context = rendered_context + rendered_rl
 
 # --- 2줄: 모델 (stdin만으로 렌더링) ---
 try:
