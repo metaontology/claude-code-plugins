@@ -54,3 +54,28 @@ chmod +x ~/.claude/dash-statusline/main.py
 ```bash
 echo '{}' | python ~/.claude/dash-statusline/main.py
 ```
+
+### 업데이트
+
+```bash
+/plugin
+```
+
+업데이트가 있으면 `✔ Updated dash-statusline` 메시지가 표시됩니다. 이후:
+
+```bash
+/reload-plugins
+```
+
+그리고 심볼릭 링크를 새 버전으로 재연결하세요.
+
+```bash
+# 새 버전으로 심링크 재연결 (버전 번호 교체)
+ln -sfn ~/.claude/plugins/cache/metaontology-claude-code-plugins/dash-statusline/{새버전} \
+    ~/.claude/dash-statusline
+
+# 이전 버전 캐시 삭제 (선택)
+rm -rf ~/.claude/plugins/cache/metaontology-claude-code-plugins/dash-statusline/{이전버전}
+```
+
+> `settings.json` 수정은 불필요합니다. 심링크만 재연결하면 새 버전이 즉시 적용됩니다.
