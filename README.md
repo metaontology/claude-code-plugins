@@ -74,8 +74,11 @@ echo '{}' | python ~/.claude/dash-statusline/main.py
 ln -sfn ~/.claude/plugins/cache/metaontology-claude-code-plugins/dash-statusline/{새버전} \
     ~/.claude/dash-statusline
 
+# 실행 권한 부여 (버전마다 누락되는 경우 있음)
+chmod +x ~/.claude/dash-statusline/main.py
+
 # 이전 버전 캐시 삭제 (선택)
 rm -rf ~/.claude/plugins/cache/metaontology-claude-code-plugins/dash-statusline/{이전버전}
 ```
 
-> `settings.json` 수정은 불필요합니다. 심링크만 재연결하면 새 버전이 즉시 적용됩니다.
+> `settings.json` 수정은 불필요합니다. 심링크 재연결 + 실행 권한 부여 후 새 버전이 즉시 적용됩니다.
