@@ -9,4 +9,4 @@ def parse(raw: dict) -> EffortData:
 def render(data: EffortData, palette, style) -> str:
     if data.level is None:
         return ''
-    return f'{palette.effort}{data.level}{palette.reset}'
+    return f'{palette.effort}effort{palette.reset} {data.level}'
