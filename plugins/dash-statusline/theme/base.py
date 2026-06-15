@@ -14,6 +14,8 @@ class ColorPalette:
     orange: str
     blue: str
     purple_red: str
+    effort: str
+    thinking: str
     reset: str
 
 

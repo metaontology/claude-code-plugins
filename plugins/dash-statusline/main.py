@@ -23,6 +23,7 @@ if sys.platform == 'win32':
     sys.stdin = open(sys.stdin.fileno(), mode='r', encoding='utf-8')
 
 from statuses import context, model, path, git, tools, report, lang, rate_limits
+from statuses import effort as effort_status, thinking as thinking_status
 from theme import load_theme
 from views import select_view
 
@@ -97,6 +98,19 @@ except Exception:
 
 rendered_context = rendered_context + rendered_rl
 
+# --- 2줄 prefix: effort / thinking ---
+try:
+    effort_data = effort_status.parse(raw)
+    rendered_effort = effort_status.render(effort_data, palette, view.style)
+except Exception:
+    rendered_effort = ''
+
+try:
+    thinking_data = thinking_status.parse(raw)
+    rendered_thinking = thinking_status.render(thinking_data, palette, view.style)
+except Exception:
+    rendered_thinking = ''
+
 # --- 2줄: 모델 (stdin만으로 렌더링) ---
 try:
     model_data = model.parse(raw, transcript)
@@ -128,6 +142,8 @@ output = view.assemble(
     context=rendered_context,
     lang=rendered_lang,
     model=rendered_model,
+    effort=rendered_effort,
+    thinking=rendered_thinking,
     path=rendered_path,
     git=rendered_git,
     tools=rendered_tools,

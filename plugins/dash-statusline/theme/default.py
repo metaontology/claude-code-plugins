@@ -10,5 +10,7 @@ default = ColorPalette(
     orange='\033[33m',
     blue='\033[38;5;75m',
     purple_red='\033[38;5;161m',
+    effort='\033[38;5;151m',
+    thinking='\033[38;5;193m',
     reset='\033[0m',
 )
