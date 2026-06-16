@@ -1,0 +1,8 @@
+{
+  "name": "git",
+  "description": "Git 워크플로우 — commit, branch, merge, PR",
+  "version": "1.0.0",
+  "author": {
+    "name": "metaontology"
+  }
+}

@@ -33,6 +33,13 @@
       "source": "./plugins/dash-statusline",
       "category": "ui",
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/dash-statusline"
+    },
+    {
+      "name": "git",
+      "description": "Git 워크플로우 — /git commit, /git branch, /git merge, /git pr 서브커맨드로 commit·branch·merge·PR 작업을 수행한다.",
+      "source": "./plugins/git",
+      "category": "developer-tools",
+      "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/git"
     }
   ]
 }
