@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0] - 2026-06-26
+
+### Added
+- skill 승격: `SKILL.md` 추가, `/dash-statusline setup`·`update` 커맨드로 설치·갱신 자동화 (수동 symlink·settings.json 절차 대행)
+
+### Changed
+- marketplace 표준 구조로 재배치: `plugins/dash-statusline/skills/dash-statusline/` (Python 소스를 `scripts/` 하위로 이동)
+
 ## [1.2.0] - 2026-06-16
 
 ### Changed
