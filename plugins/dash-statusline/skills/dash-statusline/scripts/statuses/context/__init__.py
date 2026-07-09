@@ -11,6 +11,16 @@ def _fmt_k(n: int) -> str:
     return f'{round(n / 1000)}k'
 
 
+def _fmt_duration(duration_ms: int) -> str:
+    # 경과 시간을 "0m 3s" 형식으로 변환. 60분 이상이면 "1h 2m 3s"로 시간 단위 포함
+    total_secs = duration_ms // 1000
+    mins, secs = divmod(total_secs, 60)
+    hours, mins = divmod(mins, 60)
+    if hours > 0:
+        return f'{hours}h {mins}m {secs}s'
+    return f'{mins}m {secs}s'
+
+
 def parse(raw: dict) -> ContextData:
     cw = raw.get('context_window') or {}
     cost = raw.get('cost') or {}
@@ -51,10 +61,9 @@ def render(data: ContextData, palette, style) -> str:
            f' {palette.dim}total{palette.reset} {total_str}')
     token_section = f' | {tok}'
 
-    mins, secs = divmod(data.duration_ms // 1000, 60)
     return (
         f'🧩 {bar} {data.pct}%'
         f'{token_section}'
         f' | {palette.orange}${data.cost:.2f}{palette.reset}'
-        f' | 🕒 {mins}m {secs}s'
+        f' | 🕒 {_fmt_duration(data.duration_ms)}'
     )

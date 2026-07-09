@@ -16,6 +16,7 @@ class ColorPalette:
     purple_red: str
     effort: str
     thinking: str
+    telemetry: str
     reset: str
 
 

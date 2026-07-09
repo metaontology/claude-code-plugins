@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1] - 2026-07-10
+
+### Added
+- `statuses/telemetry`: OTEL 텔레메트리 활성화 시 line 2 `🌍 EN` 뒤에 `📡 telemetry on` 표시. `~/.claude/settings.json`의 `env`에서 상위 7개 KEY의 VALUE 일치 + 하위 2개(CLIENT_CERT/KEY) 경로의 파일 존재를 모두 만족할 때만 노출
+
+### Changed
+- `statuses/context`: line 1 소요시간(🕒)이 60분 이상이면 시간 단위를 포함해 표시 (`2h 3m 4s`), 60분 미만은 기존 `Xm Ys` 유지
+
 ## [1.3.0] - 2026-06-26
 
 ### Added

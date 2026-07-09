@@ -12,5 +12,6 @@ default = ColorPalette(
     purple_red='\033[38;5;161m',
     effort='\033[38;5;151m',
     thinking='\033[38;5;193m',
+    telemetry='\033[38;2;162;216;247m',  # #A2D8F7
     reset='\033[0m',
 )

@@ -22,7 +22,7 @@ if sys.platform == 'win32':
     sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
     sys.stdin = open(sys.stdin.fileno(), mode='r', encoding='utf-8')
 
-from statuses import context, model, path, git, tools, report, lang, rate_limits
+from statuses import context, model, path, git, tools, report, lang, rate_limits, telemetry
 from statuses import effort as effort_status, thinking as thinking_status
 from theme import load_theme
 from views import select_view
@@ -70,6 +70,14 @@ try:
 except Exception:
     rendered_lang = '🌍 EN'
 
+# --- 텔레메트리(OTEL) 상태 ---
+# ~/.claude/settings.json의 env 설정만 검사하므로 stdin과 무관하다.
+try:
+    telemetry_data = telemetry.parse()
+    rendered_telemetry = telemetry.render(telemetry_data, palette, view.style)
+except Exception:
+    rendered_telemetry = ''
+
 # --- stdin 파싱 (실패 시 빈 dict로 계속 진행) ---
 try:
     raw = json.loads(sys.stdin.read())
@@ -84,6 +92,9 @@ try:
     ctx_data = context.parse(raw)
     rendered_context = context.render(ctx_data, palette, view.style)
 except Exception:
+    # 렌더링 실패 시 안전망. 파싱된 데이터(ctx_data)를 신뢰할 수 없는 상황이므로
+    # 시간 계산 없이 모두 0 상수로 표기한다. 컨텍스트 바·비용도 같은 이유로 0 고정이라
+    # 🕒도 _fmt_duration()의 60분 분기와 무관하게 '0m 0s' 리터럴로 두어 일관성을 맞춘다.
     rendered_context = (
         f'🧩 {palette.ok}{"█" * 13}{palette.reset}'
         f' 0% | {palette.orange}$0.00{palette.reset} | 🕒 0m 0s'
@@ -148,6 +159,7 @@ output = view.assemble(
     git=rendered_git,
     tools=rendered_tools,
     report=rendered_report,
+    telemetry=rendered_telemetry,
 )
 
 # 계산 완료 후 한 번에 출력 — partial 출력 방지
