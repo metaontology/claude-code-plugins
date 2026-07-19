@@ -1,7 +1,7 @@
 {
   "name": "dash-statusline",
-  "description": "Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 4~5줄로 출력하는 statusline 렌더러.",
-  "version": "1.3.1",
+  "description": "Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 5~6줄로 출력하는 statusline 렌더러.",
+  "version": "1.4.0",
   "author": {
     "name": "metaontology"
   }

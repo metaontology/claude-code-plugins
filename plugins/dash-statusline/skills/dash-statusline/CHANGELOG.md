@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0] - 2026-07-19
+
+### Added
+- `statuses/context`: 직전 턴 usage 스냅샷 전용 라인 신설 (line 2). `🗃️ 🇵🇷🇪🇻`(응답 직후 현재 컨텍스트 4합) + `📥 🇮🇳 read/creation/uncached` + `📤 🇴🇺🇹` output, 각 그룹에 턴 비용 참고치($) 표기. `cache_read == 0 && cache_creation > 0`일 때만 `🥶 cache-cold` 인디케이터 노출
+- `statuses/context/pricing`: 모델별 단가표(prefix 매칭) × 배율(cache read 0.1× / creation 1.25×)로 턴 비용 계산. 모델 미등록 시 $ 생략
+- 테마에 `orange_soft`(#38;5;179, tan) 색상 추가 — line 2 $ 전용(line 1 `orange`보다 얕은 톤)
+
+### Changed
+- `statuses/context`: line 1 재설계 — 토큰 나열(`in/out/cache/total`) 제거, 스냅샷 3합을 대괄호 `[393.4k/1m]`로 축약하고 누적 비용은 `$` 라벨로만 표기. `_fmt_tok`으로 k/m 단위 소수 1자리 표시
+- 출력 줄 수 4~5줄 → 5~6줄 (line 2에 턴 라인 삽입)
+
+### Fixed
+- line 1 `total 1m/1m` 오표기 수정: 누적 계열(`total_input/output_tokens`)과 스냅샷 계열(`current_usage.*`)을 혼합 합산해 window와 비교하던 이중 계산 제거 — 토큰 표시를 `current_usage` 스냅샷 기준으로 통일
+
 ## [1.3.1] - 2026-07-10
 
 ### Added

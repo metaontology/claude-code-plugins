@@ -28,21 +28,23 @@ from theme import load_theme
 from views import select_view
 
 # [출력 규정]
-# 4~5줄을 출력한다. 단, 5줄(🔔)은 init 상태(내용 없음)일 때 생략한다.
+# 5~6줄을 출력한다. 단, 6줄(🔔)은 init 상태(내용 없음)일 때 생략한다.
+#
+# 줄 배치: 1 게이지(🧩) / 2 턴(🗃) / 3 모델(✨) / 4 경로(📁) / 5 도구(🔧) / 6 report(🔔)
 #
 # 줄별 의존성:
-#   1~3줄 (🧩/✨/📁): stdin JSON만으로 렌더링 가능. transcript 없어도 항상 실제 값 표시.
-#   4~5줄 (🔧/🔔): transcript JSONL 파싱 결과. transcript 없거나 파싱 실패 시 기본값 표시.
+#   1~4줄 (🧩/🗃/✨/📁): stdin JSON만으로 렌더링 가능. transcript 없어도 항상 실제 값 표시.
+#   5~6줄 (🔧/🔔): transcript JSONL 파싱 결과. transcript 없거나 파싱 실패 시 기본값 표시.
 #
 # 기본값:
-#   4줄: "🔧 | 😎 | 🧊 | 🪚 | 📋"
-#   5줄: report 비어있으면 생략
+#   5줄: "🔧 | 😎 | 🧊 | 🪚 | 📋"
+#   6줄: report 비어있으면 생략
 #
 # [SIGTERM 캐시]
 # Claude Code는 연속 refresh 시 이전 실행에 SIGTERM을 보낸다.
 # SIGTERM 수신 시 cache['output']을 재출력하고 종료.
 # 출력 전에 SIGTERM이 오면 (cache 비어있으면) 아무것도 출력하지 않는다.
-# → 항상 4~5줄 또는 0줄(취소)이 되어 partial 출력이 발생하지 않는다.
+# → 항상 5~6줄 또는 0줄(취소)이 되어 partial 출력이 발생하지 않는다.
 
 cache = {}
 
@@ -109,6 +111,13 @@ except Exception:
 
 rendered_context = rendered_context + rendered_rl
 
+# --- 턴 라인: 직전 턴 usage 스냅샷 (stdin만으로 렌더링) ---
+try:
+    rendered_turn = context.render_turn(ctx_data, palette, view.style)
+except Exception:
+    # ctx_data 자체가 실패했을 수 있으므로 0 상수 고정
+    rendered_turn = f'🗃️ 🇵🇷🇪🇻 0 | 📥 🇮🇳 read 0 creation 0 uncached 0 | 📤 🇴🇺🇹 0'
+
 # --- 2줄 prefix: effort / thinking ---
 try:
     effort_data = effort_status.parse(raw)
@@ -151,6 +160,7 @@ except Exception:
 
 output = view.assemble(
     context=rendered_context,
+    turn=rendered_turn,
     lang=rendered_lang,
     model=rendered_model,
     effort=rendered_effort,

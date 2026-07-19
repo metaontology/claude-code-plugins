@@ -8,6 +8,7 @@ default = ColorPalette(
     accent='\033[96m',
     highlight='\033[38;5;228m',
     orange='\033[33m',
+    orange_soft='\033[38;5;179m',  # 2줄 $ 전용 — 1줄 orange(33)보다 얕은 노랑(tan/gold)
     blue='\033[38;5;75m',
     purple_red='\033[38;5;161m',
     effort='\033[38;5;151m',

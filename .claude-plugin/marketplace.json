@@ -29,7 +29,7 @@
     },
     {
       "name": "dash-statusline",
-      "description": "Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 4~5줄로 출력하는 statusline 렌더러.",
+      "description": "Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 5~6줄로 출력하는 statusline 렌더러.",
       "source": "./plugins/dash-statusline",
       "category": "ui",
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/dash-statusline"
