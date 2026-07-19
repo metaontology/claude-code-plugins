@@ -82,11 +82,11 @@ def render_turn(data: ContextData, palette, style) -> str:
         total_cost = f' {palette.orange_soft}(${in_usd + out_usd:.2f}){palette.reset}'
 
     line = (
-        f'🗃️ 🇵🇷🇪🇻 {_fmt_tok(prev_total)}{total_cost}'
-        f' | 📥 🇮🇳 {palette.dim}read{palette.reset} {_fmt_tok(data.read_tokens)}'
+        f'🗃️ {palette.turn_label}prev{palette.reset} {_fmt_tok(prev_total)}{total_cost}'
+        f' | 📥 {palette.turn_label}in{palette.reset} {palette.dim}read{palette.reset} {_fmt_tok(data.read_tokens)}'
         f' {palette.dim}creation{palette.reset} {_fmt_tok(data.creation_tokens)}'
         f' {palette.dim}uncached{palette.reset} {_fmt_tok(data.uncached_tokens)}{in_cost}'
-        f' | 📤 🇴🇺🇹 {_fmt_tok(data.output_tokens)}{out_cost}'
+        f' | 📤 {palette.turn_label}out{palette.reset} {_fmt_tok(data.output_tokens)}{out_cost}'
     )
 
     # cache-cold: rd==0 && cr>0 (11 §4 관찰 구현).

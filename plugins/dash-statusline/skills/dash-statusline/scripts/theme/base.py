@@ -13,6 +13,7 @@ class ColorPalette:
     highlight: str
     orange: str
     orange_soft: str  # 2줄 턴 라인 $ 전용 — orange보다 얕은 노랑(222)
+    turn_label: str   # 2줄 턴 라인 Prev/In/Out 라벨 전용 (periwinkle #B1B9F9)
     blue: str
     purple_red: str
     effort: str

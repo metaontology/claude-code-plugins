@@ -116,7 +116,7 @@ try:
     rendered_turn = context.render_turn(ctx_data, palette, view.style)
 except Exception:
     # ctx_data 자체가 실패했을 수 있으므로 0 상수 고정
-    rendered_turn = f'🗃️ 🇵🇷🇪🇻 0 | 📥 🇮🇳 read 0 creation 0 uncached 0 | 📤 🇴🇺🇹 0'
+    rendered_turn = f'🗃️ {palette.turn_label}prev{palette.reset} 0 | 📥 {palette.turn_label}in{palette.reset} read 0 creation 0 uncached 0 | 📤 {palette.turn_label}out{palette.reset} 0'
 
 # --- 2줄 prefix: effort / thinking ---
 try:
@@ -149,7 +149,7 @@ except Exception:
     rendered_path = '📁 ...'
     rendered_git = ''
 
-# --- 4~5줄: tools/report (transcript 없으면 기본값) ---
+# --- 5~6줄: tools/report (transcript 없으면 기본값) ---
 try:
     tools_data = tools.parse(transcript, cwd)
     rendered_tools = tools.render(tools_data, palette, view.style)

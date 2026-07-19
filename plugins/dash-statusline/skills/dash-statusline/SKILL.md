@@ -5,7 +5,7 @@ description: Use when installing, configuring, or updating the dash-statusline s
 
 # dash-statusline
 
-Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 4~5줄로 출력하는 statusline 렌더러. 이 skill은 설치·설정·갱신을 자동화한다 (README의 수동 절차 대행).
+Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도구 활동을 5~6줄로 출력하는 statusline 렌더러. 이 skill은 설치·설정·갱신을 자동화한다 (수동 설치 절차 대행).
 
 ## 서브커맨드
 
@@ -38,7 +38,7 @@ Claude Code 응답 완료 시 컨텍스트·토큰·비용·모델·경로·도�
    }
    ```
 
-5. **동작 확인** — 아래가 4~5줄을 출력하면 성공.
+5. **동작 확인** — 아래가 5~6줄을 출력하면 성공.
    ```bash
    echo '{}' | python ~/.claude/dash-statusline/scripts/main.py
    ```

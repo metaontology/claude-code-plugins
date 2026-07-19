@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.1] - 2026-07-19
+
+### Fixed
+- `statuses/context`: line 2 라벨을 regional indicator 글자(🇵🇷🇪🇻/🇮🇳/🇴🇺🇹)에서 ASCII `prev`/`in`/`out`으로 교체 — Windows 11 기본 터미널의 regional indicator 너비 계산 버그로 line 2가 깨지던 문제 해결
+
+### Added
+- 테마에 `turn_label`(#B1B9F9, periwinkle) 색상 추가 — line 2 `prev`/`in`/`out` 라벨 전용
+
 ## [1.4.0] - 2026-07-19
 
 ### Added
