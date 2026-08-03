@@ -6,7 +6,9 @@ from statuses.tools._reader import _skill_emoji
 
 
 class SkillParser:
-    def __init__(self):
+    def __init__(self, cwd=''):
+        # 내장/비내장 판정에 project scope(.claude/skills/)를 뒤지므로 cwd가 필요하다
+        self._cwd = cwd
         self._running = {}
         self._done = []
 
@@ -16,7 +18,7 @@ class SkillParser:
 
     def on_use(self, ev: ToolsEventUse):
         name = ev.inp.get('skill', 'skill')
-        self._running[ev.tid] = f'{_skill_emoji(name)} {name}'
+        self._running[ev.tid] = f'{_skill_emoji(name, self._cwd)} {name}'
 
     def on_result(self, ev: ToolsEventResult):
         item = self._running.pop(ev.tid, None)

@@ -16,7 +16,7 @@ def parse(path, cwd='') -> ToolsData:
     tool_p = ToolParser()
     agent_p = AgentParser(path, cwd)
     mcp_p = McpParser()
-    skill_p = SkillParser()
+    skill_p = SkillParser(cwd)
     tasks_p = TasksParser()
     parsers = {
         'tool': tool_p,

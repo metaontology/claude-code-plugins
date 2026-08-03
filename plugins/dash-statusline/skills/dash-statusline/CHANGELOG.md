@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.0] - 2026-08-03
+
+### Changed
+- `statuses/tools/_reader.py`: skill 내장(`𓌜`)/비내장(`🪓`) 판정을 열거(allowlist)에서 **여집합**으로 전환. 이름의 네임스페이스와 `skills/`·`commands/`의 실물 파일 유무로 판정하므로, Claude Code에 새 내장 skill이 추가되어도 목록을 갱신할 필요가 없다
+- `BUILTIN_SKILLS`의 역할 변경: 판정 기준 → `cwd`가 소실돼 파일 탐색이 불가능할 때만 쓰는 fallback
+- `SkillParser`가 `cwd`를 받는다 — project scope 조회에 필요
+
+### Fixed
+- `BUILTIN_SKILLS` 목록 교정 (13개 추가·3개 제거, 9 → 19). `verify`·`stuck`이 내장인데 `🪓`로, `init`이 내장이 아닌데 `𓌜`로 표시되던 문제. 제거한 `init`·`review`·`security-review`는 skill이 아니라 `src/commands/`의 슬래시 커맨드다
+- `commands/` 디렉토리의 skill을 비내장으로 인식. `loadSkillsFromCommandsDir()`가 같은 엔진으로 등록하므로 그것도 skill이다 — 디렉토리(`<name>/SKILL.md`)와 단일 파일(`<name>.md`) 두 형식 모두
+- project scope 상향 탐색이 git root(없으면 home)에서 멈춘다. 경계를 넘으면 Claude Code가 로드하지 않는 것까지 비내장으로 오판한다. worktree의 `.git` 파일도 경계로 취급
+- user scope 기준 디렉토리에 `CLAUDE_CONFIG_DIR` 반영 (`~/.claude` 고정 해제)
+- 중첩 skill 이름은 슬래시가 아니라 콜론이다 — `.claude/skills/git/git-commit/`은 `git:git-commit`
+
+### Added
+- `tests/test_reader.py` 신규 40개 — `_reader.py`를 덮는 첫 테스트 (전체 12 → 52)
+- `docs/guides/스킬-내장-구분.md` 신규 — 판정의 근거·알고리즘·한계 전문
+
 ## [1.4.1] - 2026-07-19
 
 ### Fixed
