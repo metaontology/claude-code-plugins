@@ -1,0 +1,494 @@
+/* 뷰어 셸의 골격 — 머리 · 도구 모음(검색창) · 축 탭 · 2패널 · 드래그 핸들 · 연결 끊김 배너.
+   축별 화면의 서식은 30-*.css · 40-*.css 가 담는다. */
+
+/* 테마와 무관한 값 */
+:root {
+  --pane-width: 340px;
+
+  /* 사용자 말풍선 **안쪽**의 색. 말풍선은 두 테마에서 모두 밝은 면이므로(라이트는
+     연노랑, 다크는 밝은 회청) 그 위에 얹히는 것들은 한 벌로 족하다. 테마를 타는 것은
+     말풍선 바탕 하나뿐이다.
+
+     **다크의 말풍선이 이 셋의 하한을 정한다.** 라이트(#ffebae, 상대휘도 0.838)는
+     13.2:1 · 12.5:1 · 8.8:1로 여유가 크지만, 다크(#8e949c, 0.293)는 글자 5.1:1 ·
+     링크 4.8:1 · 매치 3.4:1(면 대비)로 AA에 붙어 있다. **다크 말풍선을 더 어둡게
+     하려면 이 셋을 함께 내려야 하고, 그러면 링크가 검정과 구별되지 않는다.**
+
+     매치가 바깥의 --hit-*와 반대로 **어두운 바탕에 밝은 글자**인 것도 밝기 때문이다.
+     다크의 --hit-bg(#f0b429, 0.513)를 그대로 쓰면 말풍선과 1.64:1이라 묻힌다 */
+  --bubble-fg: #1b2430;
+  --bubble-link: #0a2947;
+  --bubble-hit-bg: #5c3800;
+  --bubble-hit-fg: #ffe9b0;
+}
+
+/* 색은 두 벌뿐이다. shell.html의 부트가 화면을 그리기 전에 `data-theme`을 light·dark 중
+   하나로 **항상** 찍으므로 prefers-color-scheme 미디어쿼리가 할 일이 없다.
+   세 벌 이상이면 한 색을 고칠 때 여러 곳을 맞춰야 하고, 그것은 토큰이 늘수록 커진다.
+
+   `:root` 단독이 라이트와 함께 있는 것은 부트가 실행되지 않았을 때의 값이다.
+
+   `color-scheme`은 벌마다 한 값이다. 스크롤바와 검색창의 기본 위젯은 브라우저가 그려
+   변수가 닿지 않는데, `light dark`로 적으면 그 선택을 OS 선호가 하므로 토글이 덮으려던
+   것이 그 자리에서만 되살아난다 */
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #1c1c1e;
+  --muted: #6b6b70;
+  --line: #e2e2e6;
+  --accent: #2b6cb0;
+  --code-bg: #f5f5f7;
+  --warn-bg: #fff4e5;
+  --warn-fg: #7a4a00;
+  /* 말풍선은 흰 바탕 위에서 발언의 경계를 혼자 그린다 — 테두리를 주지 않으므로
+     바탕색만으로 보여야 한다. --hit-*(검색 매치)와 뜻도 자리도 다르고,
+     --warn-*(배너 · 〈● 실행중〉 배지 · 인용)와도 다르므로 따로 둔다 */
+  --bubble-bg: #ffebae;
+  --hit-bg: #ffd54f;
+  --hit-fg: #3a2a00;
+  /* 머리의 프로젝트 이름에 쓴다. **다크의 파스텔 노랑을 여기 그대로
+     쓸 수 없다** — 흰 배경에서 1.05:1이라 읽히지 않는다. 배경과 8:1이고, 경로가 쓰는
+     `--muted`(L*45.4)와 **밝기로도 갈린다**(L*34.3 · 1.51:1).
+
+     `--accent`(#2b6cb0)를 재사용하지 않는다. 그 색은 L*44.8로 `--muted`와 1.02:1이라
+     **휘도가 같은 층**이고, 색상만 다른 강조는 강조로 읽히지 않는다(`docs/guides/color/`의
+     「휘도 채널과 색 채널이 다른 말을 할 수 있다」). 링크가 그 색을 쓰는 것도 이유다 —
+     더 진한 쪽이 링크와 구별된다 */
+  --project: #0b4f9e;
+  /* 〈현재〉 배지의 면. 라이트에서는 강조색 그대로다 */
+  --now-bg: var(--accent);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #16171a;
+  --fg: #e6e6e9;
+  --muted: #9a9aa2;
+  --line: #2c2d31;
+  --accent: #7fb3ea;
+  --code-bg: #1f2024;
+  --warn-bg: #3a2d18;
+  --warn-fg: #ffcf8a;
+  /* 다크에서만 말풍선이 배경보다 **밝다.** 어두운 노랑은 갈색으로 읽혀 강조가 되지
+     않으므로 색상을 --accent(#7fb3ea, 209°)에 맞춘 회청으로 옮겼다 — 212°로 거의
+     같은 색상이고 채도만 낮다. 라이트의 노랑과 색이 갈리는 것은 그 때문이다 */
+  --bubble-bg: #8e949c;
+  --hit-bg: #f0b429;
+  --hit-fg: #241a04;
+  --project: #ffff87;
+  /* 다크에서만 〈현재〉가 강조색을 떠난다. `--accent`는 이 화면에서 **열람 중인 행의 왼쪽
+     띠 · Claude 마커 · 링크**가 함께 쓰는 색이라, 배지까지 같은 색이면 "지금 열고 있는
+     세션"과 "이 뷰어를 띄운 세션"이 한 색으로 보인다.
+
+     L*는 강조색과 맞춘다 — #7fb3ea가 71.3(구간 76.1%)이고 이 값이 70.2(74.7%)다.
+     배지가 계층에서 차지하던 높이를 그대로 유지하므로 강조 강도가 달라지지 않는다.
+     글자(`--bg`)와 7.85:1이다.
+
+     어두운 면 + 밝은 글자로 가지 않는다. 그것은 〈● 실행중〉(`--warn-*`)의 그림이고,
+     둘이 같은 형태가 되면 한 행에 나란히 붙었을 때 뜻이 갈리지 않는다 */
+  --now-bg: #ff8a80;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.6 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
+/* ── 상단 안내 ──────────────────────────────────────────────────────────── */
+/* 상단 고정이고 닫을 수 없다. 지금 화면이 왜 실물과 다른지를 알리는 것이 이 배너의
+   일이다 — 편집이 안 되거나(끊김), 목록이 모자라거나(재생성 전).
+   두 사유가 한 자리를 나눠 쓰고 무엇을 띄울지는 셸이 정한다 */
+
+#notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+/* display를 지정했으므로 hidden 속성만으로는 숨겨지지 않는다.
+   빠뜨리면 사유가 없을 때도 이 배너가 **빈 노란 줄로 17px 남는다**(위아래 여백과 경계선) */
+#notice[hidden] { display: none; }
+
+/* 안내가 권하는 행동 하나. 배너 안에 있으므로 배너의 색을 물려받되 테두리로 눌린다 —
+   여기서 색을 새로 정하면 경고 배경 위에서 대비가 무너진다 */
+#notice .notice-act {
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+#notice .notice-act:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* ── 머리 ───────────────────────────────────────────────────────────────── */
+/* 왼쪽은 무엇을 보고 있는지를 말하고, 오른쪽은 축과 무관한 전역 설정이 온다 —
+   지금은 테마 토글 하나다(서식은 50-theme.css).
+   목록을 조작하는 것은 아래 도구 모음이 갖는다 */
+
+#top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 셋이 한 줄에 선다 — 스킬명 · 프로젝트 이름 · 경로. `baseline` 정렬이라 글자 크기가
+   다른 셋의 밑선이 맞는다. `center`로 두면 큰 글자의 가운데에 작은 글자가 떠 보인다.
+
+   `flex: 1`과 `min-width: 0`은 아래 경로 숨김 판정이 읽는 값을 만든다 — 이 묶음이 남는
+   폭을 전부 차지해야 `clientWidth`가 곧 가용 폭이 된다 */
+#brand {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 스킬명. **자간이 이것을 라벨로 만든다** — 크기만 줄이면 그냥 작은 글씨로 보이고,
+   대문자로 세우면 이 화면에 없는 조판이 하나 생기는 데다 `/history`와 글자가 달라진다 */
+#brandMark {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .11em;
+  color: var(--muted);
+}
+
+/* 라벨과 프로젝트를 가르는 선. 폴더 이모지를 두지 않는다 — 이모지는 플랫폼마다 크기와
+   색이 달라 이 줄의 정렬이 기기를 타고, 뜻도 구분자보다 흐리다 */
+#brandSep {
+  align-self: center;
+  flex: 0 0 auto;
+  width: 1px;
+  height: 14px;
+  background: var(--line);
+}
+
+/* **이 줄에서 강한 것은 이것 하나다.** 경로의 마지막 조각을 따로 올리지 않는 이유가
+   여기 있다 — 같은 이름을 두 번 강조하면 눈이 갈 곳이 둘로 나뉘고, 그러면 어느 쪽이
+   제목인지가 흐려진다. 배경칩을 쓰지 않는다: 이 화면에는 이미 가로 경계선이 셋이라
+   머리 줄에 면을 하나 더 만들면 층이 는다 */
+#project {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--project);
+}
+
+/* 전체 경로. **자르지 않는다** — 잘린 경로는 전체 경로가 아니므로 「어느 프로젝트인지
+   확실히 한다」는 이 값의 일을 하지 못한다. 들어가지 않으면 통째로 사라지고, 판정은
+   `00-app.js`의 `fitPath`가 한다.
+
+   `display`를 주지 않는다. 그것을 정하면 판정이 쓰는 `hidden` 속성이 무력화된다 */
+#projectPath {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── 도구 모음 ──────────────────────────────────────────────────────────── */
+/* 목록을 조작하는 것들이 한 줄에 모인다 — 왼쪽에 선택 상태와 실행 버튼, 가운데에 검색창,
+   오른쪽에 전역 동작 버튼. **검색창이 늘 있으므로 이 단은 사라지지 않는다.** 체크할 때만
+   나타나는 단이면 체크할 때마다 탭과 목록이 통째로 밀린다.
+
+   flex가 아니라 grid다. `1fr auto 1fr`은 가운데 칼럼을 **화면 중앙**에 세우므로 왼쪽
+   선택 바가 나타나도 검색창의 자리가 그대로다. 여백으로 미는 쪽(flex)은 그 자리가 왼쪽
+   내용의 폭을 따라 움직여, 커서를 놓았던 곳이 체크 하나에 달라진다.
+
+   칼럼은 각 규칙이 자기 자리에 못 박는다 — DOM 순서에 기대지 않으므로 선택 바를 넣는
+   쪽(20-destructive.js)이 어디에 삽입하든 배치가 같다 */
+
+#toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 폭을 clamp로 준다. 고정 320px은 좁은 화면에서 양옆 칼럼을 밀어내고, 100%는 넓은
+   화면에서 검색창 하나가 줄의 절반을 차지한다 */
+#search {
+  grid-column: 2;
+  width: clamp(140px, 40vw, 320px);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+
+/* 오른쪽 칼럼. 버튼이 줄 끝에 붙는다 — 그 자리가 머리의 테마 버튼과 같은 세로선이다 */
+#tb-actions {
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 좁은 창에서는 **가운데 정렬을 포기한다.** 가운데가 화면 중앙에 서는 것은 양쪽 `1fr`이
+   같을 때뿐인데, 왼쪽 칼럼은 선택 바의 폭(축소되지 않는다 — `20-destructive.css`)보다
+   작아질 수 없다. 그 폭이 `1fr`을 넘으면 칼럼이 커지며 가운데를 오른쪽으로 밀어, 중앙도
+   아니고 오른쪽도 아닌 자리가 된다.
+
+   조건은 `1fr ≥ 선택 바`이고 `1fr = (창폭 − 검색창 320 − 버튼 66 − gap 36 − 여백 28) / 2`
+   이므로, 선택 바 310px 기준으로 **창폭 1070px**이 경계다. 실측도 같다(1084px 중앙 유지 ·
+   그 아래 어긋남). 임계를 1080px에 두면 그 경계를 조금 넘어선다 — 선택 바 폭은 개수 문구가
+   `12개`로 늘거나 축별 실행 버튼 문구가 길어지면 함께 는다.
+
+   여기서는 flex로 돌아간다 — 검색창이 오른쪽, 그 뒤에 동작 버튼이다. **줄어드는 것은
+   검색창 하나뿐이므로** 이 단은 어느 폭에서도 한 줄을 지킨다(실측: 500px까지 49px 고정).
+   그리드 전용 속성(`grid-column`)은 flex에서 저절로 무시되므로 되돌릴 것이 없다 */
+@media (max-width: 1080px) {
+  #toolbar { display: flex; }
+
+  #search {
+    width: auto;
+    flex: 0 1 320px;
+    min-width: 80px;
+    margin-left: auto;
+  }
+
+  #tb-actions { flex: 0 0 auto; }
+}
+
+/* ── 축 전환 탭 ─────────────────────────────────────────────────────────── */
+/* 항상 두 축이 보이고 항목 수를 함께 표시한다 */
+
+/* 탭은 종이 탭처럼 바닥에서 솟는다. 줄 전체에 옅은 면을 깔고 **선택된 하나만** 본문과
+   같은 면을 가지므로, 지금 어느 축을 보고 있는지가 색이 아니라 면으로 읽힌다.
+   밑줄 강조를 쓰지 않는 이유는 이 화면에 이미 가로 경계선이 셋(머리·도구 모음·탭)이라
+   넷째 선이 층을 하나 더 만들기 때문이다.
+
+   탭이 둘뿐이므로 사이에 세로 구분선을 두지 않는다. 선택된 탭의 테두리가 이미 경계이고,
+   둘 중 하나는 늘 선택돼 있어 구분선이 그 옆에 붙으면 장식이 된다 */
+/* 바의 여백과 버튼의 여백을 합친 값이 도구 모음의 왼쪽 여백(14px)과 같다 —
+   4 + 테두리 1 + 9. 탭 글자가 그 위 줄의 요소들과 한 세로선에 선다 */
+#tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 4px 0;
+  background: var(--code-bg);
+  border-bottom: 1px solid var(--line);
+}
+
+#tabs button {
+  /* 아래 경계선 위에 얹는다. 선택된 탭이 그 선을 자기 배경으로 끊어 본문과 이어진다 */
+  margin-bottom: -1px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 7px 7px 0 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#tabs button:hover:not([aria-selected="true"]) { color: var(--fg); }
+
+#tabs button[aria-selected="true"] {
+  border-color: var(--line);
+  border-bottom-color: var(--bg);
+  background: var(--bg);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* 항목 수는 라벨을 읽는 데 방해가 되지 않아야 한다. 선택 여부와 무관하게 흐리다 —
+   무엇을 보고 있는지는 면이 말하고, 이 숫자는 그 옆의 사실이다 */
+#tabs .tab-count {
+  margin-left: 5px;
+  color: var(--muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 2패널 ──────────────────────────────────────────────────────────────── */
+
+#split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.pane {
+  overflow: auto;
+  min-width: 0;
+}
+
+#list {
+  width: var(--pane-width);
+  flex: 0 0 auto;
+  border-right: 1px solid var(--line);
+}
+
+#body {
+  flex: 1;
+  padding: 14px 18px;
+}
+
+#handle {
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+#handle:hover,
+#handle.dragging {
+  background: var(--accent);
+}
+
+/* 넓은 화면에서는 목록으로 되돌아갈 필요가 없다 */
+#back { display: none; }
+
+.empty {
+  padding: 20px 16px;
+  color: var(--muted);
+}
+
+/* ── 검색 결과 그룹 ─────────────────────────────────────────────────────── */
+/* 그룹의 수와 이름은 축이 정한다. 셸은 머리를 그리는 규칙만 갖는다 */
+
+.group-label {
+  padding: 8px 14px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.group-label:first-child { border-top: 0; }
+
+/* ── 좁은 화면 ──────────────────────────────────────────────────────────── */
+/* 세로로 쌓지 않는다. 세션 하나가 최악 50 KB이라 목록이 본문 위로 밀려나고,
+   목록을 다시 보려면 본문 전체를 스크롤해 지나야 한다 */
+
+@media (max-width: 720px) {
+  #handle { display: none; }
+  #list { width: auto; flex: 1; border-right: 0; }
+  #back { display: block; }
+
+  body.on-body #list { display: none; }
+  body:not(.on-body) #body { display: none; }
+
+  #back {
+    margin-bottom: 10px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+}
+
+/* ── 마크다운 렌더 결과의 기본 서식 ─────────────────────────────────────── */
+
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+  margin: 1.2em 0 0.5em;
+  line-height: 1.3;
+}
+
+.md h1 { font-size: 1.5em; }
+.md h2 { font-size: 1.3em; }
+.md h3 { font-size: 1.15em; }
+.md h4, .md h5, .md h6 { font-size: 1em; }
+
+.md p, .md ul, .md ol, .md blockquote, .md table { margin: 0.6em 0; }
+
+.md ul, .md ol { padding-left: 1.4em; }
+
+.md blockquote {
+  margin-left: 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+}
+
+.md code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.92em;
+}
+
+/* 코드는 줄바꿈되면 뜻이 달라지므로 이것만 가로 스크롤을 갖는다 */
+.md pre {
+  margin: 0.6em 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  overflow-x: auto;
+}
+
+.md pre code {
+  padding: 0;
+  background: none;
+}
+
+.md .lang {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.md table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.md th, .md td {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.md a { color: var(--accent); }
+
+/* 끊긴 위키링크는 <a>가 아니므로 눌러도 아무 일이 없다 */
+.md .wiki-broken {
+  color: var(--warn-fg);
+  background: var(--warn-bg);
+  border-radius: 3px;
+  padding: 0 3px;
+  text-decoration: line-through;
+}
+
+/* 긴 경로가 가로 스크롤을 만들지 않게 한다. 도구 라벨의 경로는 절단되지 않는다 */
+.md, #bodyInner {
+  overflow-wrap: anywhere;
+}

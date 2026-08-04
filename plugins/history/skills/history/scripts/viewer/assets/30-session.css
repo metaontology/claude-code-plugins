@@ -1,0 +1,457 @@
+/* 세션 축 화면의 서식 — 목록 행 · 대화 머리와 칩 · 대화 항목 · 매치 강조.
+
+   색은 00-base.css가 정의한 변수를 쓰고 여기서 새로 만들지 않는다.
+   다크 모드 대응이 그 파일 한 곳에만 있어야 한다. */
+
+/* ── 목록 행 ────────────────────────────────────────────────────────────── */
+
+.srow {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.srow:hover { background: var(--code-bg); }
+
+/* 셸의 addRow가 현재 열람 대상에 이 속성을 세운다 */
+.srow[aria-current="true"] {
+  background: var(--code-bg);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.srow-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.srow-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 표식(체크박스)은 첫 줄의 글자 높이에 맞춘다 */
+.srow-head .dm { align-self: center; }
+
+/* 두 배지는 뜻이 다르므로 줄도 자리도 가른다 — 실행중은 첫 줄 오른쪽, 현재는 둘째 줄
+   오른쪽이다. 한 행에 둘 다 붙는 경우가 정상이다(내가 연 세션도 돌고 있으므로).
+   행 배경을 건드리지 않는 이유는 aria-current(지금 열람 중인 행)가 이미 배경과 왼쪽 띠를
+   쓰기 때문이다. 여기에 배경을 더하면 다른 두 뜻이 같은 그림이 된다 */
+
+.srow-now,
+.srow-live {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 돌고 있는 세션 전부에 같은 자리·같은 모양으로 붙는다 */
+.srow-live {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+/* /history를 실행한 세션. 둘째 줄의 오른쪽 끝을 쓴다.
+   면이 `--accent`가 아니라 `--now-bg`인 이유는 00-base.css의 그 토큰이 갖는다 —
+   다크에서 열람 중인 행의 띠·마커·링크와 색이 겹치지 않게 갈라 둔다 */
+.srow-now {
+  margin-left: auto;
+  background: var(--now-bg);
+  color: var(--bg);
+  animation: srow-now-pulse 4s ease-in-out infinite;
+}
+
+/* 0~100%로 흔들지 않는다. 완전히 사라졌다 나타나는 깜박임은 어지럼을 유발하고 목록을
+   훑는 시선을 붙잡는다. 80~100%면 변화가 눈에 들어오면서 배지가 어느 순간에도 읽히고,
+   시선을 빼앗지 않는다. 4초 주기도 같은 이유다 */
+@keyframes srow-now-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* `prefers-reduced-motion`으로 이것을 끄지 않는다. 그 설정이 막으려는 것은 **움직임**
+   (이동·확대·패럴랙스)인데 이 애니메이션은 위치도 크기도 바꾸지 않는 투명도 페이드이고,
+   0.33 Hz라 점멸 기준(3 Hz)과도 멀다.
+
+   Windows의 「애니메이션 효과 표시」를 끄면 브라우저가 `reduce`를 보고한다. 그것은 흔한
+   설정이라, 여기서 전면 차단하면 이 표식이 대부분의 화면에서 그냥 정지한 배지가 되어
+   규칙 자체가 무의미해진다. 위치가 변하는 표식을 나중에 더한다면 그때 이 쿼리로 그쪽을
+   끈다 — 지금 끌 것은 없다. */
+
+.srow-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  /* 숫자 폭을 고르게 만든다. 없으면 같은 자릿수끼리도 미세하게 어긋난다 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 세 값의 세로 줄을 고정한다. 폭이 내용을 따라가면 「어제」인 행과 「13시간 전」인 행에서
+   💬·📄가 서로 다른 x에 서고, 목록을 훑는 눈이 행마다 그 자리를 다시 찾는다.
+
+   시각 칸의 최대 표기는 7일이 지난 세션의 `YYYY-MM-DD`이고, 개수 칸은 세 자리까지
+   담는다. 그보다 길어지면 밀려나며 그 행만 어긋난다 — 흔하지 않은 값에 늘 빈칸을
+   내주는 것보다 낫다 */
+.srow-when { min-width: 72px; }
+.srow-count { min-width: 44px; }
+
+/* ── 검색 결과 행의 이유 ────────────────────────────────────────────────── */
+
+.srow-why {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.srow-more {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--code-bg);
+  font-size: 11px;
+}
+
+/* ── 대화 머리 ──────────────────────────────────────────────────────────── */
+
+.shead {
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shead-title {
+  font-size: 1.15em;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.shead-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* 구분점을 노드로 만들지 않는다 — 첫 항목이 없을 때(시각이 빈 세션) 앞에 남는다 */
+.shead-meta > span + span::before {
+  content: "· ";
+}
+
+.shead-id {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.shead-copy {
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ── 매치 사이 이동 ─────────────────────────────────────────────────────── */
+/* 매치가 하나도 없으면 이 줄 자체가 없다 */
+
+.hitnav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hitnav button {
+  padding: 1px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+/* ── 칩 넷 — 버튼 줄과 그 아래 한 칸 ────────────────────────────────────── */
+/* 세션당 평균 24개, 최대 134개다. 펼친 채로 두면 대화가 화면 아래로 밀린다.
+   내용이 버튼 **밖**에 있으므로 무엇을 열어도 버튼 줄이 그대로 있다 */
+
+.chipwrap { margin-bottom: 14px; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-tab {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 열린 칩. **폭에 관여하는 성질을 건드리지 않는다** — 글자 굵기·안쪽 여백·테두리 두께가
+   달라지면 그 버튼이 늘어나 옆 버튼이 밀리고, 그 움직임을 읽는 데 시간이 든다.
+   색만 바꾼다. `--accent`를 쓰지 않는 것은 그 색이 이미 열람 중인 행의 띠 · Claude
+   마커 · 링크에 쓰이고 있어서, 여기까지 같은 색이면 뜻이 겹쳐 보이기 때문이다 */
+.chip-tab[aria-expanded="true"] {
+  border-color: var(--fg);
+  background: var(--code-bg);
+  color: var(--fg);
+}
+
+/* 한 번도 쓰지 않은 갈래. **버튼을 숨기지 않는다** — 자리가 세션마다 바뀌면 다음 클릭의
+   표적을 눈으로 다시 찾아야 한다. 눌리기는 하고 「없음」이 나온다 */
+.chip-tab-zero { opacity: 0.5; }
+
+/* 내용 칸. 아무것도 열지 않았으면 자리를 차지하지 않는다 */
+.chip-panel.open { margin-top: 8px; }
+
+/* 갈래 내역은 이름과 횟수 두 열이다. `fit-content`라 긴 이름(`mcp__…`)에 맞춰 폭이
+   정해지고, 수는 그 오른쪽 끝에 정렬된다 — 자리가 고정되어야 훑으며 비교할 수 있다 */
+.tally {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 16px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  font-size: 12px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.tally dd {
+  margin: 0;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip-list {
+  margin: 0;
+  padding-left: 1.3em;
+  font-size: 12px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.chip-list li { margin: 2px 0; }
+
+.chip-none {
+  color: var(--muted);
+  font-family: inherit;
+}
+
+/* 도구 집계는 표식 · 이름 · 수의 트리다. 표식 열을 고정폭·가운데 정렬로 두어 **이름의
+   왼쪽 끝을 맞춘다** — 표식의 실제 폭이 제각각이라 흐르는 대로 두면 열이 어긋난다.
+   폰트 폴백은 `.ent-kind`와 같은 값이라 대화 항목에서 본 그림과 같아진다 */
+.tools {
+  display: grid;
+  grid-template-columns: 2.8em 1fr;
+  gap: 3px 6px;
+  /* 내용 칸은 전폭인데 항목이 짧다. 묶지 않으면 이름과 수가 양 끝으로 갈라진다 */
+  max-width: 20em;
+  margin: 0;
+  font-size: 12px;
+}
+
+/* 이름은 왼쪽, 수는 오른쪽 끝. 수의 자리가 고정되어야 세로로 훑으며 비교할 수 있다 */
+.tools dd {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.tools-mark {
+  text-align: center;
+  font-family: "Segoe UI Historic", "Nirmala UI", "Segoe UI Symbol", inherit;
+}
+
+/* 자식은 표식 열 **안에서** 밀어 넣는다. 왼쪽 여백만큼 중앙이 옮겨가 계단이 생긴다 */
+.tools-kid { padding-left: 1.4em; }
+
+/* 한 번도 쓰지 않은 갈래도 지우지 않는다 — 이 목록이 곧 표식의 범례이기 때문이다 */
+.tools-zero { opacity: 0.45; }
+
+.tools-n { font-variant-numeric: tabular-nums; }
+
+/* ── 대화가 없는 세션 ───────────────────────────────────────────────────── */
+/* 방금 시작해 아직 아무 말도 오가지 않은 세션이다. 목록의 「항목이 없습니다」(`.empty`)와
+   달리 **대화가 설 자리 한가운데**에 선다 — 그 자리가 비었다는 사실을 말하는 것이지
+   패널이 비었다는 것이 아니다. 그래서 높이를 확보하고 가운데로 모은다 */
+
+.talk-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+  color: var(--muted);
+}
+
+/* ── 대화 항목 — 흐름 쪽 ────────────────────────────────────────────────── */
+/* Claude의 말과 도구는 시각 · 마커 · 본문 세 열이다. 시각이 없는 도구 항목은 첫 열을
+   비워 두므로 마커 열이 흔들리지 않는다. float나 절대 위치를 쓰지 않는 이유는 본문이
+   여러 줄로 흐를 때 마커가 첫 줄에 붙어 있어야 하기 때문이다.
+
+   말풍선으로 감싸지 않는다. 이 쪽 본문에는 코드블록과 표가 흔한데, 말풍선은 좌우
+   여백과 최대 폭을 함께 물고 오므로 가로로 넓은 것들이 한 겹 더 좁아진다 */
+
+.ent {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0 8px;
+  padding: 5px 0;
+}
+
+.ent-at {
+  color: var(--muted);
+  font-size: 12px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ent-mark { font-size: 13px; }
+
+/* ✦는 이모지가 아니라 기호라서 글자색이 먹는다. 도구 마커(이모지)는 색이 고정이므로
+   Claude의 말만 accent를 입어 흐름의 시작점이 눈에 먼저 들어온다 */
+.ent-assistant .ent-mark {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ent-text { min-width: 0; }
+
+/* ── 대화 항목 — 사용자 발언 ────────────────────────────────────────────── */
+/* 세 종류(입력 · 슬래시 커맨드 · 로컬 커맨드)가 모두 이쪽이다. 열 배치를 쓰지 않는다 —
+   오른쪽에 있다는 것 자체가 말한 사람을 가리키므로 마커 열이 할 일이 없고, 시각은
+   말풍선 밖 아래에 붙는다.
+
+   목록의 `💬 n`은 여전히 이 세 종류를 함께 센다. 화면에서 마커가 사라져도 세는 정의는
+   그대로이고, 오른쪽에 선 것을 세면 그 수와 맞는다 */
+
+.ent-said {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  /* 위를 넓게 띄운다. 발언 하나가 앞 흐름과 붙어 있으면 오른쪽으로 옮긴 것만으로는
+     차례가 바뀐 자리가 드러나지 않는다 */
+  padding: 14px 0 5px;
+}
+
+/* 짧은 발언은 짧은 만큼만 차지한다. 최대 폭을 두는 이유는 긴 프롬프트가 전폭을 채우면
+   왼쪽 흐름과 폭이 같아져 오른쪽 정렬이 보이지 않기 때문이다 */
+.said-bubble {
+  max-width: 72%;
+  padding: 8px 13px;
+  border-radius: 14px;
+  background: var(--bubble-bg);
+  color: var(--bubble-fg);
+  overflow-wrap: anywhere;
+}
+
+/* 말풍선 안은 바깥과 명암이 뒤집힌다 — 다크에서 말풍선만 배경보다 밝기 때문이다.
+   --fg · --accent · --code-bg · --muted를 그대로 상속하면 그 자리에서 전부 읽히지
+   않으므로, 안에 들어올 수 있는 것들을 여기서 덮는다.
+
+   면은 변수가 아니라 rgba로 덮는다. 말풍선이 양쪽 다 밝으므로 검정을 얇게 얹으면
+   바탕색이 무엇이든 같은 만큼 가라앉고, 토큰이 테마당 하나씩 더 늘지 않는다 */
+.said-bubble.md code,
+.said-bubble.md pre {
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+}
+
+.said-bubble.md a { color: var(--bubble-link); }
+
+.said-bubble.md blockquote {
+  border-left-color: rgba(0, 0, 0, 0.28);
+  color: inherit;
+}
+
+.said-bubble.md th,
+.said-bubble.md td { border-color: rgba(0, 0, 0, 0.22); }
+
+.said-bubble.md .lang { color: inherit; opacity: 0.65; }
+
+.said-at {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ent-raw {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.92em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 내장·비내장 표식. 폭을 고정하고 가운데에 세우는 것은 **뒤에 오는 이름의 x를 맞추기
+   위해서다** — 네 글자의 실제 폭이 제각각이라(ඞ·𓌜는 문자, 👾·🪓는 이모지) 흐르는 대로
+   두면 `Explore`와 `code-reviewer`가 서로 다른 자리에서 시작해 세로로 읽히지 않는다.
+
+   폰트를 지정하는 이유는 두 글자가 이모지가 아니라 문자이기 때문이다. 본문 폰트에 없으면
+   두부(□)가 되므로 각 문자를 담은 Windows 기본 폰트를 폴백으로 준다 */
+.ent-kind {
+  display: inline-block;
+  width: 1.5em;
+  margin-right: 4px;
+  text-align: center;
+  font-family: "Segoe UI Historic", "Nirmala UI", "Segoe UI Symbol", inherit;
+}
+
+.ent-tool {
+  margin-right: 8px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* 도구 이름과 라벨의 위계를 가른다. 라벨은 이름보다 넓고 자주 경로다 */
+.ent-tool + .ent-label { color: var(--muted); }
+
+/* ── 매치 강조 ──────────────────────────────────────────────────────────── */
+/* <mark>의 브라우저 기본값은 다크 모드에서 검은 글씨 위 노랑이 되어 읽히지 않는다.
+   --warn-*가 아니라 --hit-*를 쓰는 이유는 매치가 사용자 말풍선 **안에도** 서기
+   때문이다. 말풍선(--bubble-bg)과 --warn-bg는 밝기가 가까워 그 자리에서 매치가 묻는다 */
+
+.sbody mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--hit-bg);
+  color: var(--hit-fg);
+}
+
+/* 말풍선 안에서는 명암이 뒤집힌다(위 「말풍선 안」 절). 선택자를 둘로 겹치는 것은
+   .sbody mark와 구체성을 맞부딪히지 않기 위한 것이다 */
+.sbody .said-bubble mark {
+  background: var(--bubble-hit-bg);
+  color: var(--bubble-hit-fg);
+}
+
+.sbody mark.hit-on {
+  outline: 2px solid var(--accent);
+}

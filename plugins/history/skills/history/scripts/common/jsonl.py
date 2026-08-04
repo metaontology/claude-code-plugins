@@ -3,14 +3,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 import common.paths as paths
-from common.paths import REGISTRY_FILE
-
-
-def find_jsonl(session_id: str) -> Path | None:
-    """session_id에 해당하는 jsonl 파일 경로 반환. 없으면 None."""
-    for f in paths.PROJECTS_DIR.rglob(f"{session_id}.jsonl"):
-        return f
-    return None
 
 
 def find_project_slug(session_id: str) -> str | None:
@@ -28,9 +20,9 @@ def all_jsonls_in_slug(slug: str) -> list[Path]:
 
 def get_session_start(session_id: str) -> str:
     """session_registry.json에서 세션 최초 시작 시각 반환. 레지스트리 없으면 현재 시각."""
-    if REGISTRY_FILE.exists():
+    if paths.REGISTRY_FILE.exists():
         try:
-            registry = json.loads(REGISTRY_FILE.read_text(encoding="utf-8"))
+            registry = json.loads(paths.REGISTRY_FILE.read_text(encoding="utf-8"))
             if session_id in registry:
                 return registry[session_id]
         except (json.JSONDecodeError, OSError):

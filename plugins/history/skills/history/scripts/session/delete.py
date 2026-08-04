@@ -1,84 +1,85 @@
-"""SESSION.md 체크박스 파싱 및 세션 삭제."""
-import re
-import shutil
+"""세션 jsonl 원본 삭제.
+
+대상은 `~/.claude/projects/{슬러그}/{세션ID}.jsonl` 원본이다. **복구할 수 없다.**
+
+마크다운 표를 역파싱해 선택된 세션을 얻는 함수들은 없다. 산출물이 마크다운이 아니고,
+화면이 식별자를 직접 갖고 보내므로 역파싱할 표현이 없다.
+"""
 import common.paths as paths
-from pathlib import Path
-from common.jsonl import all_jsonls_in_slug
 
 
-def parse_session_id_from_cell(cell: str) -> str | None:
-    """마크다운 링크 셀에서 full UUID 추출.
+def blocked_reason(session_id: str, current_id: str, live_ids: set[str],
+                   verb: str = "삭제") -> str:
+    """그 세션에 손대는 것을 거부할 사유. 거부하지 않으면 빈 문자열.
 
-    예: '[abcd1234](./user-prompts/abcd1234-0000-.../user-prompts.md)' → 'abcd1234-0000-...'
-    링크 형식이 아니면 None 반환.
+    근거를 "살아 있는가" 하나로 줄이지 않고 현재 세션과의 합집합으로 둔다. 레지스트리를
+    읽지 못하면 `live_ids`가 비는데, 그때 현재 세션 가드까지 사라지면 보호가 후퇴한다.
+    합집합이면 최악이 레지스트리가 없던 시절과 같다.
+
+    두 사유가 겹치면 현재 세션이 이긴다 — 현재 세션은 거의 항상 살아 있고, 사용자에게
+    더 구체적인 사실이 "그건 지금 이 창이다"이다.
+
+    판정이 삭제 전용이 아니므로 문구의 동사만 인자로 받는다. 이름 수정
+    (`session/rename.py`)이 같은 근거를 쓰며, 판정을 그쪽에 복사해 두면 한쪽만 고쳐지는
+    날이 온다. 함수가 이 파일에 남는 것은 여기서 태어났기 때문이다.
+
+    Args:
+        session_id (str): 판정할 세션 UUID
+        current_id (str): `/history`를 실행한 세션 UUID
+        live_ids (set[str]): 지금 살아 있는 세션 UUID의 집합
+        verb (str): 사유 문구에 들어갈 동사
+
+    Returns:
+        str: 거부 사유. 손대도 되면 빈 문자열
     """
-    m = re.search(r'\[[^\]]+\]\(\./user-prompts/([0-9a-f]{8}-[0-9a-f-]{27,35})/user-prompts\.md\)', cell)
-    if m:
-        return m.group(1)
-    return None
+    if session_id == current_id:
+        return f"현재 세션은 {verb}할 수 없습니다"
+    if session_id in live_ids:
+        return f"실행 중인 세션은 {verb}할 수 없습니다"
+    return ""
 
 
-def list_checked(session_md_path: Path) -> list[str]:
-    """SESSION.md에서 삭제 컬럼이 비어있지 않은 행의 full UUID 목록 반환.
+def delete_sessions(session_ids: list[str], slug: str, current_id: str,
+                    live_ids: set[str]) -> list[dict]:
+    """세션 jsonl을 지우고 대상마다 결과를 돌려준다.
 
-    파일이 없거나 체크 항목이 없으면 빈 리스트 반환.
-    셀에 어떤 문자든 입력되어 있으면 삭제 대상으로 인식 (x, [x], v, ✓ 등).
+    일부가 실패해도 나머지는 처리한다. 파일 삭제는 되돌릴 수 없으므로 요청을 통째로
+    취소하는 방식이 성립하지 않는다 — 부분 성공을 사실대로 보고한다.
+
+    Args:
+        session_ids (list[str]): 삭제할 세션 UUID 목록
+        slug (str): 프로젝트 슬러그
+        current_id (str): 현재 세션 UUID. 이 값은 거부된다
+        live_ids (set[str]): 지금 살아 있는 세션 UUID의 집합. 이 값들도 거부된다
+
+    Returns:
+        list[dict]: `{"target", "ok", "reason"}` 목록. 순서는 입력과 같다
     """
-    return [entry["sid"] for entry in list_checked_with_meta(session_md_path)]
-
-
-def list_checked_with_meta(session_md_path: Path) -> list[dict]:
-    """SESSION.md에서 체크된 행의 메타 정보 목록 반환.
-
-    반환 항목: {"row": int(1-based 데이터 행 번호), "sid": str, "name": str}
-    파일이 없거나 체크 항목이 없으면 빈 리스트 반환.
-    """
-    if not session_md_path.exists():
-        return []
-    result = []
-    data_row = 0
-    for line in session_md_path.read_text(encoding="utf-8").splitlines():
-        parts = [p.strip() for p in line.split("|")]
-        if len(parts) < 5:
+    results = []
+    for session_id in session_ids:
+        # 화면에 체크박스가 없는 것은 실수를 막고, 이 가드는 우회를 막는다.
+        # 살아 있는 세션의 jsonl은 Claude Code가 계속 쓰고 있는 파일이다
+        reason = blocked_reason(session_id, current_id, live_ids)
+        if reason:
+            results.append(_result(session_id, False, reason))
             continue
-        checkbox_col = parts[1]
-        sid = parse_session_id_from_cell(parts[3])
-        if sid:
-            data_row += 1
-            if checkbox_col:
-                name = parts[4] if len(parts) > 4 else ""
-                result.append({"row": data_row, "sid": sid, "name": name})
-    return result
 
+        jsonl = paths.PROJECTS_DIR / slug / f"{session_id}.jsonl"
+        if not jsonl.exists():
+            # 조용히 성공으로 처리하지 않는다. 화면의 식별자가 디스크와 맞지 않는 것은
+            # 산출물이 낡았다는 뜻이고, 사용자가 알아야 하는 사실이다
+            results.append(_result(session_id, False, "해당 세션 파일이 없습니다"))
+            continue
 
-def find_full_id_by_prefix(prefix: str, slug: str) -> str | None:
-    """8자리 prefix로 시작하는 jsonl 파일의 full UUID 반환. 없으면 None."""
-    for jpath in all_jsonls_in_slug(slug):
-        if jpath.stem.startswith(prefix):
-            return jpath.stem
-    return None
-
-
-def contains_current_session(session_ids: list[str], current_id: str) -> bool:
-    """session_ids에 current_id가 포함되어 있으면 True를 반환한다."""
-    return current_id in session_ids
-
-
-def delete_sessions(session_ids: list[str], slug: str, history_dir: Path) -> list[str]:
-    """지정된 세션의 jsonl 파일과 .history/user-prompts/{sid}/ 디렉토리를 삭제한다.
-
-    파일·디렉토리가 없으면 무시하고 계속 진행.
-    삭제 처리된 세션 ID 목록을 반환.
-    """
-    deleted = []
-    for sid in session_ids:
-        # ~/.claude/projects/{slug}/{sid}.jsonl 삭제
-        jsonl = paths.PROJECTS_DIR / slug / f"{sid}.jsonl"
-        if jsonl.exists():
+        try:
             jsonl.unlink()
-        # .history/user-prompts/{sid}/ 디렉토리 삭제
-        hist = history_dir / "user-prompts" / sid
-        if hist.exists():
-            shutil.rmtree(hist)
-        deleted.append(sid)
-    return deleted
+        except OSError as exc:
+            results.append(_result(session_id, False, f"삭제 실패: {exc.strerror or exc}"))
+            continue
+        results.append(_result(session_id, True, ""))
+    return results
+
+
+def _result(target: str, ok: bool, reason: str) -> dict:
+    """항목별 결과 하나를 만든다."""
+    return {"target": target, "ok": ok, "reason": reason}

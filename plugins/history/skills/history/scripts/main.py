@@ -1,148 +1,89 @@
-"""history 스킬 진입점. CLAUDE_SESSION_ID 환경변수와 argv로 동작을 분기한다.
+"""history 스킬 진입점. CLAUDE_SESSION_ID와 argv로 명령을 해석한다.
 
 사용법:
-    python main.py              # 현재 세션 export
-    python main.py all          # 전체 세션 export
-    python main.py del          # SESSION.md 체크 항목 dry-run 출력
-    python main.py del {id}     # 단일 세션 존재 확인 dry-run
-    python main.py del --confirm {id} [{id} ...]  # 실제 삭제 실행
+    python main.py              # 기록을 갱신하고 뷰어를 연다
+    python main.py rebuild      # 갱신 판정을 무시하고 전 세션을 다시 만든 뒤 뷰어를 연다
 
-[유지보수 주의]
-user_prompt/builder.py의 스킬 주입 메시지 필터는 "Base directory for this skill:" 마커에
-의존한다. Claude Code가 스킬 주입 포맷을 변경하면 SKILL.md 내용이 user-prompts.md에
-그대로 기록될 수 있다 — 포맷 변경 시 extract_entries() 필터 재검토 필요.
+명령은 이 둘뿐이다. `rebuild`는 CLI가 받는 유일한 인자이며, 자연어 표현(`refresh`,
+`전체 갱신`, `다시 빌드` 등)을 이 토큰으로 바꾸는 일은 SKILL.md가 맡는다.
 """
 import os
 import sys
 from pathlib import Path
+from typing import NoReturn
 
-from common.jsonl import find_project_slug, all_jsonls_in_slug, find_jsonl
-from session.builder import build_session_md
-from session.delete import list_checked, list_checked_with_meta, find_full_id_by_prefix, delete_sessions, contains_current_session
-from auto_mem.builder import build_auto_mem_md
-from user_prompt.builder import write_user_prompts
+from server.app import ensure_server, open_viewer, viewer_url
+from viewer.render import refresh
 
-# 현재 작업 디렉토리 기준 .history/ 폴더 (PROJECT_DIR에서 실행해야 정확한 위치)
-HISTORY_DIR = Path(".history")
+# CLI가 인식하는 유일한 인자. 별칭을 두지 않는다.
+REBUILD = "rebuild"
 
 
-def run_export(session_id: str, all_sessions: bool):
-    """user-prompts.md, SESSION.md, AUTO-MEMORY.md를 생성·갱신한다."""
-    slug = find_project_slug(session_id)
-    HISTORY_DIR.mkdir(exist_ok=True)
-
-    if all_sessions and slug:
-        # 전체 세션의 user-prompts.md 재생성
-        for jpath in all_jsonls_in_slug(slug):
-            sid = jpath.stem
-            count = write_user_prompts(sid, HISTORY_DIR)
-            print(f"저장: .history/user-prompts/{sid}/user-prompts.md ({count}개 항목)")
-    else:
-        # 현재 세션만 갱신
-        count = write_user_prompts(session_id, HISTORY_DIR)
-        print(f"저장: .history/user-prompts/{session_id}/user-prompts.md ({count}개 항목)")
-
-    if slug:
-        session_md_content = build_session_md(slug, session_id, HISTORY_DIR, all_sessions=all_sessions)
-        session_file = HISTORY_DIR / "SESSION.md"
-        session_file.write_text(session_md_content, encoding="utf-8")
-        print(f"저장: {session_file}")
-
-        auto_mem_content = build_auto_mem_md(slug)
-        auto_mem_file = HISTORY_DIR / "AUTO-MEMORY.md"
-        auto_mem_file.write_text(auto_mem_content, encoding="utf-8")
-        print(f"저장: {auto_mem_file}")
-    else:
-        print("WARN: project slug 탐색 실패 — SESSION.md, AUTO-MEMORY.md 생략")
+def fail(message: str) -> NoReturn:
+    """오류 메시지를 stderr에 쓰고 비정상 종료한다."""
+    print(f"ERROR: {message}", file=sys.stderr)
+    sys.exit(1)
 
 
-def run_delete_list_checked(session_id: str):
-    """SESSION.md에서 [x] 체크된 세션 목록을 출력한다 (dry-run).
+def parse_command(args: list[str]) -> bool:
+    """argv 나머지를 rebuild 여부로 해석한다.
 
-    skill.md가 이 출력을 읽고 사용자에게 확인을 요청한 뒤 --confirm으로 재호출한다.
-    출력:
-        CHECKED_NONE              — 체크 항목 없음
-        CHECKED_LIST              — 체크 항목 있음 (이후 줄에 UUID 목록)
+    Args:
+        args (list[str]): `sys.argv[1:]`
+
+    Returns:
+        bool: `rebuild` 명령이면 True, 인자가 없으면 False
+
+    Raises:
+        SystemExit: 그 밖의 인자면 알 수 없는 명령으로 거부한다
     """
-    session_md = HISTORY_DIR / "SESSION.md"
-    entries = list_checked_with_meta(session_md)
-    if not entries:
-        print("CHECKED_NONE")
-        return
-    current_entry = next((e for e in entries if e["sid"] == session_id), None)
-    if current_entry:
-        print(f"INCLUDES_CURRENT row={current_entry['row']} sid={session_id[:8]} name={current_entry['name']}")
-        return
-    print("CHECKED_LIST")
-    for e in entries:
-        print(e["sid"])
+    if not args:
+        return False
+    if args == [REBUILD]:
+        return True
+    fail(f"알 수 없는 명령: {' '.join(args)}")
 
 
-def run_delete_confirmed(session_id: str, target_ids: list[str]):
-    """target_ids 세션을 실제 삭제하고 SESSION.md를 갱신한다."""
-    if not target_ids:
-        print("ERROR: --confirm 뒤에 세션 ID가 없습니다. 'del --confirm {uuid} ...' 형식으로 실행하세요.", file=sys.stderr)
-        sys.exit(1)
-    if contains_current_session(target_ids, session_id):
-        print(f"ERROR: 현재 세션({session_id[:8]})이 삭제 목록에 포함되어 있어 실행이 중단되었습니다.", file=sys.stderr)
-        sys.exit(1)
-    slug = find_project_slug(session_id)
-    if not slug:
-        print("ERROR: project slug 탐색 실패", file=sys.stderr)
-        sys.exit(1)
-    deleted = delete_sessions(target_ids, slug, HISTORY_DIR)
-    session_md_content = build_session_md(slug, session_id, HISTORY_DIR, all_sessions=False)
-    (HISTORY_DIR / "SESSION.md").write_text(session_md_content, encoding="utf-8")
-    for sid in deleted:
-        print(f"삭제됨: {sid[:8]}")
-    print("SESSION.md 갱신 완료")
+def run(session_id: str, rebuild: bool) -> None:
+    """산출물을 갱신하고 서버를 확보한 뒤 뷰어를 연다.
 
+    프로젝트 루트는 현재 작업 디렉토리다. 산출물이 그 아래 `.history/`에 생기므로
+    프로젝트 루트에서 실행해야 한다.
 
-def run_delete_check_single(session_id: str, target: str):
-    """단일 세션 ID의 존재 여부를 확인한다 (dry-run).
+    갱신이 서버 확보보다 앞인 이유는 서버가 `/`로 `index.html`을 서빙하는데 없으면
+    404이기 때문이다. 브라우저가 열리기 전에 파일이 있어야 한다.
 
-    출력:
-        FOUND {full_uuid}   — 세션 존재
-        NOT_FOUND           — 세션 없음
+    `rebuild` bool과 갱신 판정을 `or`로 합치는 자리는 `refresh` 안이다. 원본 목록을
+    만드는 것이 뷰어의 지식이므로 진입점이 판정 함수를 직접 부르지 않는다 — 그렇게 하면
+    embed 축이 늘 때마다 진입점을 고쳐야 한다.
+
+    Args:
+        session_id (str): 현재 세션 UUID
+        rebuild (bool): 갱신 판정을 무시하고 전량 재생성할지 여부
     """
-    slug = find_project_slug(session_id)
-    if not slug:
-        print("NOT_FOUND")
-        return
-    # 8자리 이하 prefix면 full UUID 탐색, 그 이상이면 full UUID로 간주
-    full_id = find_full_id_by_prefix(target, slug) if len(target) <= 8 else target
-    if not full_id or find_jsonl(full_id) is None:
-        print("NOT_FOUND")
-        return
-    if full_id == session_id:
-        print(f"IS_CURRENT_SESSION {full_id}")
-        return
-    print(f"FOUND {full_id}")
+    project_root = Path.cwd()
+    try:
+        refresh(project_root, session_id, rebuild)
+        # 세션 ID를 넘겨 `.server`에 기록·갱신한다. 서버의 현재 세션 가드가 그것을 읽는다
+        info = ensure_server(project_root, session_id)
+    except RuntimeError as exc:
+        fail(str(exc))
+    open_viewer(info)
+    print(f"뷰어: {viewer_url(info)}")
 
 
-def main():
+def main() -> None:
+    """환경변수와 argv를 확인한 뒤 명령을 실행한다."""
+    # 출력을 UTF-8로 고정한다. Windows 기본값(cp949)으로 내보내면 이 스크립트를 호출하는
+    # Claude Code가 한글 메시지를 깨진 바이트로 읽어 사용자에게 전달할 수 없다.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     session_id = os.environ.get("CLAUDE_SESSION_ID", "")
     if not session_id:
-        print("ERROR: CLAUDE_SESSION_ID not set", file=sys.stderr)
-        sys.exit(1)
+        fail("CLAUDE_SESSION_ID가 설정되지 않았습니다. 현재 세션을 특정할 수 없습니다.")
 
-    args = sys.argv[1:]
-
-    if not args:
-        run_export(session_id, all_sessions=False)
-    elif args[0] == "all":
-        run_export(session_id, all_sessions=True)
-    elif args[0] == "del":
-        if "--confirm" in args:
-            idx = args.index("--confirm")
-            run_delete_confirmed(session_id, args[idx + 1:])
-        elif len(args) > 1 and not args[1].startswith("--"):
-            run_delete_check_single(session_id, args[1])
-        else:
-            run_delete_list_checked(session_id)
-    else:
-        print(f"ERROR: unknown command '{args[0]}'", file=sys.stderr)
-        sys.exit(1)
+    run(session_id, rebuild=parse_command(sys.argv[1:]))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,41 @@
+/* 세션 이름 수정 창.
+
+   창의 면(테두리 · 배경 · backdrop · h2)과 버튼 줄은 20-destructive.css가 갖는다.
+   그 규칙의 선택자에 `#rn-dialog`가 함께 적혀 있으므로 여기서 다시 적지 않는다 —
+   복사하면 한쪽만 고쳐지는 날이 온다.
+
+   색은 00-base.css가 정의한 변수를 쓰고 여기서 새로 만들지 않는다. */
+
+/* 확인 창은 고른 항목이 목록으로 서서 폭이 저절로 나오지만, 이 창의 내용은 한 줄짜리
+   입력칸뿐이라 짧은 이름에서 창이 글자 폭까지 좁아진다. 좁은 화면에서는 90vw가 이긴다 */
+#rn-dialog {
+  min-width: min(420px, 90vw);
+}
+
+/* 지금 이름. 입력칸이 이미 같은 값을 담고 있으므로 이 줄은 **고치기 전의 값**을 남겨
+   두는 자리다. 설명 텍스트의 색과 크기를 쓴다 */
+.rn-now {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* box-sizing을 지정한다. padding이 없으면 width: 100%가 창 밖으로 넘친다 */
+.rn-input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+/* 기본 outline을 지우고 테두리 색으로 대신한다. 포커스가 어디 있는지는 남는다 */
+.rn-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

@@ -1,62 +1,44 @@
 ---
 name: history
-description: 현재 세션의 모든 user prompt, skill 호출, 로컬 커맨드를 jsonl에서 읽어 {프로젝트폴더}/.history/{세션UUID}/user-prompts.md 로 저장한다. `/history`로 호출한다.
+description: 현재 프로젝트의 Claude Code 세션 기록을 갱신하고 뷰어를 브라우저에 연다. 세션 열람·정리, 기록 갱신·재생성(rebuild·refresh·전체 갱신·다시 빌드) 요청에 사용한다. `/history`로 호출한다.
 ---
 
-현재 세션(또는 전체 세션)의 대화 기록을 `.history/` 폴더에 저장한다.
+현재 프로젝트의 **모든 세션**을 담은 뷰어를 갱신해 브라우저에 연다.
 
-## 포맷 레퍼런스
+## 명령
 
-- `references/session.md` — SESSION.md 포맷, 체크박스 규칙, del 확인 흐름
-- `references/auto-memory.md` — AUTO-MEMORY.md 포맷, 메모리 이전 패턴
-- `references/user-prompt.md` — user-prompts.md 포맷
+| 사용자 요청 | 넘기는 인자 |
+|---|---|
+| `/history` — 인자 없이 호출 | 없음 |
+| 재생성 요청 (`rebuild`·`refresh`·`전체 갱신`·`다시 빌드` 등) | `rebuild` |
 
-## 지원 명령
+명령은 이 둘뿐이다. 열람 범위를 고르는 인자는 없다 — 뷰어는 항상 현재 프로젝트의 전 세션을
+담고, 두 명령의 차이는 **얼마나 다시 만들었는가**뿐이다.
 
-| 명령 | 동작 |
-|------|------|
-| `/history` | 현재 세션 user-prompts.md 재생성, SESSION.md·AUTO-MEMORY.md 갱신 |
-| `/history all` | 모든 세션 user-prompts.md 재생성, SESSION.md·AUTO-MEMORY.md 갱신 |
-| `/history del` | SESSION.md에서 `[x]` 체크된 세션 삭제 |
-| `/history del {세션ID}` | 특정 세션 삭제 |
+### 인자 정규화는 이 파일이 맡는다
+
+CLI는 `rebuild` 토큰 하나만 받는다. 사용자가 어떤 표현으로 재생성을 요청하든 `rebuild`로
+바꿔 넘기고, 재생성 요청이 아니면 인자 없이 실행한다. 사용자의 표현을 그대로 전달하지 않는다.
+
+## 폐기된 명령
+
+`all`, `del`, `del {세션ID}`는 없다. 그대로 넘기면 알 수 없는 명령 오류로 끝난다.
+**세션 삭제와 정리는 뷰어에서 한다.** 사용자가 삭제를 요청하면 뷰어를 연 뒤 그곳에서
+처리하도록 안내한다.
 
 ## 실행
 
-`/history` 및 `/history all`:
-
 ```sh
-cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" $ARGUMENTS
+cd "{프로젝트 루트}" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "{스킬 폴더}/scripts/main.py"
 ```
 
-`/history del` (체크박스):
+재생성 요청이면 마지막에 `rebuild`를 붙인다.
 
-1. dry-run 실행:
-   ```sh
-   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del
-   ```
-2. 출력 첫 줄이 `CHECKED_NONE` → "체크 항목 없음. SESSION.md에서 삭제할 세션에 `x` 표시 후 재실행하세요." 종료.
-3. 출력 첫 줄이 `INCLUDES_CURRENT row={n} sid={8자리} name={세션명}` →
-   **반드시 아래 형식 그대로** 출력 후 종료:
-   > "{n}번째 항목 '{세션명}' ({8자리})은 현재 세션이므로 삭제할 수 없습니다. 체크를 해제 후 다시 실행하세요."
-4. 출력 첫 줄이 `CHECKED_LIST` → 이후 줄의 UUID 목록으로 사용자에게 확인 요청:
-   > "다음 N개 세션을 삭제하시겠습니까?\n- {sid[:8]} ...\n(y/N)"
-5. `y` 확인 시 삭제 실행:
-   ```sh
-   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del --confirm {sid1} {sid2} ...
-   ```
-6. 결과 출력 후 종료.
+- `CLAUDE_CODE_SESSION_ID`는 **실재하는 환경변수다.** 그대로 넘긴다.
+- `{스킬 폴더}`는 이 파일이 주입될 때 함께 오는 **`Base directory for this skill:` 값**이다.
+- `{프로젝트 루트}`는 현재 작업 디렉토리다. 도구가 이미 그곳에서 시작하면 `cd`를 생략한다.
+- **`$PROJECT_DIR`·`$SKILL_DIR` 같은 변수는 정의되어 있지 않다.** 그대로 쓰면 빈 문자열로
+  전개되어 엉뚱한 경로를 찾는다.
+- 산출물은 실행 위치의 `.history/`에 생기므로 **프로젝트 루트에서 실행해야 한다.**
 
-`/history del {세션ID}` (단일):
-
-1. dry-run 실행:
-   ```sh
-   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del {세션ID}
-   ```
-2. 출력이 `NOT_FOUND` → "세션 `{세션ID}`를 찾을 수 없습니다." 종료.
-3. 출력이 `IS_CURRENT_SESSION {full_uuid}` → "현재 세션은 삭제할 수 없습니다." 종료.
-4. 출력이 `FOUND {full_uuid}` → "세션 `{세션ID}`를 삭제하시겠습니까? (y/N)"
-5. `y` 확인 시 삭제 실행:
-   ```sh
-   cd "$PROJECT_DIR" && CLAUDE_SESSION_ID="$CLAUDE_CODE_SESSION_ID" python "$SKILL_DIR/scripts/main.py" del --confirm {full_uuid}
-   ```
-6. 결과 출력 후 종료.
+출력이 `ERROR:`로 시작하면 그 메시지를 사용자에게 그대로 전달하고 종료한다.
