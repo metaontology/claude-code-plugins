@@ -69,6 +69,11 @@
        페인트에서는 비어 있고, file://에서는 끝까지 비어 있다 — 사본은 무엇이 살아
        있는지 보증할 수 없으므로 그쪽에 표시가 없는 것이 옳다 */
     live: [],
+    /* 이 창이 지금 보고 있는 세션 UUID. 서버가 SSE로 밀어 준다. **초기값이 `[]`가 아니라
+       `null`인 것에 뜻이 있다** — embed에도 `current`(이 파일을 만든 세션)가 있으므로,
+       아직 서버가 말하지 않은 상태와 "창이 아무 세션도 보고 있지 않다"를 갈라야 한다.
+       전자면 embed 값을 쓰고 후자면 표식이 없다. file://에서는 끝까지 null이다 */
+    current: null,
     /* 서버에 닿지 않는 상태. 배너 문구(`notices.offline`)와 따로 공개하는 이유는 그 문구가
        자리 하나를 두고 경합하는 값이라 「지금 끊겼는가」를 그것으로 물어볼 수 없기 때문이다.
        서버에 닿는 것을 전제하는 조작이 이 값을 읽어 자기 자리를 거둔다 */
@@ -446,19 +451,25 @@
       renderNotice();
     });
 
-    /* 두 이벤트 모두 접속 직후 한 번, 그 뒤로는 그 목록이 변할 때만 온다. 따라서 이벤트가
+    /* 세 이벤트 모두 접속 직후 한 번, 그 뒤로는 그 값이 변할 때만 온다. 따라서 이벤트가
        왔다는 것 자체가 변화다. 알아들을 수 없는 값으로 화면을 흔들지 않는다 — 파싱에
        실패하면 직전 상태를 그대로 둔다 */
-    function onList(name, apply) {
+    function onEvent(name, apply) {
       source.addEventListener(name, (event) => {
-        let ids;
+        let value;
         try {
-          ids = JSON.parse(event.data);
+          value = JSON.parse(event.data);
         } catch (error) {
           return;
         }
-        if (Array.isArray(ids)) apply(ids);
+        apply(value);
       });
+    }
+
+    /* 형 검사는 값마다 다르다. 배열인 둘과 문자열인 하나를 한 검사로 묶으면 그 검사가
+       아무것도 걸러내지 못한다 — 파싱만 공통이다 */
+    function onList(name, apply) {
+      onEvent(name, (value) => { if (Array.isArray(value)) apply(value); });
     }
 
     // 살아 있는 세션 — 행의 배지와 체크박스가 이 값을 읽는다
@@ -472,6 +483,13 @@
     onList('known', (ids) => {
       notices.staleCount = unseenCount(ids);
       renderNotice();
+    });
+    /* 이 창이 보고 있는 세션 — `/resume`으로 갈아타면 이 값이 옮겨간다. 그래서 embed에
+       굳은 값을 덮어야 하고, 빈 문자열로 덮는 것도 사실이므로 걸러내지 않는다 */
+    onEvent('current', (id) => {
+      if (typeof id !== 'string') return;
+      App.current = id;
+      App.refreshList();
     });
 
     // 재시도는 EventSource가 이미 한다. 이 페이지에 필요한 것은 재접속이 아니라

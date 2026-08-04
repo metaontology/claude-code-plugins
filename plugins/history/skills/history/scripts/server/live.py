@@ -1,7 +1,10 @@
-"""지금 살아 있는 Claude Code 세션이 무엇인가에 답한다.
+"""레지스트리에 두 질문을 묻는다 — 무엇이 살아 있는가, 그리고 이 창이 무엇을 보고 있는가.
 
 원본은 `~/.claude/sessions/{pid}.json`이다. 실행 중인 인스턴스마다 파일 하나가 있고,
 그 안의 `sessionId`가 곧 세션 jsonl의 파일명이므로 목록의 행과 그대로 맞물린다.
+
+`pid`는 생존 확인의 대상이면서 **창의 정체성**이다. `/resume`은 같은 pid 항목의
+`sessionId`만 갈아 끼우므로, 창을 pid로 붙잡아 두면 그 창의 지금을 언제든 되물을 수 있다.
 
 **문서화된 인터페이스가 아니다.** 디렉토리가 없거나 JSON이 깨졌거나 기대한 키가
 사라져도 이 모듈은 빈 목록을 돌려주고 예외를 밖으로 내지 않는다. 판별이 실패했을 때의
@@ -103,6 +106,28 @@ def live_sessions() -> list[dict]:
     return [entry for entry in found if entry is not None]
 
 
+def session_for_pid(pid: int) -> str:
+    """그 pid의 창이 지금 보고 있는 세션 UUID. 찾지 못하면 빈 문자열.
+
+    `/resume`은 같은 pid 항목의 `sessionId`만 갈아 끼우므로, 이 조회가 곧 "그 창의 지금"이다.
+
+    **반대 방향(세션 UUID로 창의 pid를 찾는 것)은 두지 않는다.** 여러 창이 같은 세션을
+    열고 있으면 후보가 여럿이고, 그중 어느 것이 `/history`를 실행한 창인지 가릴 근거가
+    레지스트리 안에 없다. 첫 후보를 고르면 절반의 확률로 옆 창을 추적한다 —
+    모호한 근거는 없는 것보다 나쁘다. 내 창의 pid는 `app.window_pid()`가 환경에서 읽는다.
+
+    Args:
+        pid (int): 창의 pid
+
+    Returns:
+        str: 그 창이 보고 있는 세션 UUID. 없으면 빈 문자열
+    """
+    for entry in live_sessions():
+        if entry.get("pid") == pid:
+            return entry["sessionId"]
+    return ""
+
+
 def _same_dir(left: str, right: Path) -> bool:
     """두 경로가 같은 디렉토리를 가리키는가.
 
@@ -115,18 +140,24 @@ def _same_dir(left: str, right: Path) -> bool:
 
 
 def project_session_ids(project_root: Path) -> list[str]:
-    """`project_root`에서 시작된 살아 있는 세션 UUID. 사전순 정렬.
+    """`project_root`의 살아 있는 창이 보고 있는 세션 UUID. **창 하나에 원소 하나.**
 
     정렬을 갖는 이유는 스트림이 이 값을 직전 값과 비교해 보낼지 정하기 때문이다.
     정렬이 없으면 디렉토리 열거 순서가 바뀔 때마다 변경으로 읽힌다.
+
+    **중복을 접지 않는다.** 창 둘이 같은 세션을 열고 있으면 그 UUID가 두 번 담긴다.
+    접으면 "이 세션을 몇 창이 열고 있는가"를 되살릴 방법이 없어지고, 창이 하나 붙거나
+    떨어져도 값이 변하지 않아 스트림이 침묵한다. 접는 자리는 그 값을 쓰는 쪽에 둔다 —
+    삭제 가드는 `set(...)`으로 감싼다. 그쪽이 묻는 것은 "살아 있는가" 하나여서 개수가
+    답을 바꾸지 않는다.
     """
     try:
         root = Path(project_root).resolve()
     except (OSError, ValueError):
         return []
-    found = {
+    found = [
         entry["sessionId"]
         for entry in live_sessions()
         if isinstance(entry.get("cwd"), str) and _same_dir(entry["cwd"], root)
-    }
+    ]
     return sorted(found)

@@ -6,10 +6,10 @@
 
 유휴 시간 초과로 종료하지 않는다. 탭이 열려 있는 한 사용자가 보고 있는 것이다.
 
-그 연결에 세션 목록 둘도 함께 실어 보낸다 — 지금 살아 있는 것과 기록이 남은 것. 무엇이
-그에 해당하는지는 `server.live`와 `viewer.render`가 알고, 이 모듈은 **그 연결에 쓰는
-자리가 하나뿐이라는 것**만 지킨다 — 폴링 스레드를 따로 두고 같은 소켓에 쓰면 코멘트와
-이벤트가 섞여 SSE 프레임이 깨진다.
+그 연결에 세션 상태 셋도 함께 실어 보낸다 — 지금 살아 있는 것, 이 창이 보고 있는 것,
+기록이 남은 것. 무엇이 그에 해당하는지는 `server.live`와 `viewer.render`가 알고, 이 모듈은
+**그 연결에 쓰는 자리가 하나뿐이라는 것**만 지킨다 — 폴링 스레드를 따로 두고 같은 소켓에
+쓰면 코멘트와 이벤트가 섞여 SSE 프레임이 깨진다.
 """
 import json
 import select
@@ -37,13 +37,19 @@ _PING = b": ping\n\n"
 # 표로 두므로 이벤트가 늘어도 `_pump`의 루프는 그대로다
 _STREAMS = (
     ("live", lambda server: project_session_ids(server.project_root)),
+    ("current", lambda server: server.current_session_id()),
     ("known", lambda server: server.recorded_ids()),
 )
 
 
-def _event(name: str, session_ids: list[str]) -> bytes:
-    """세션 목록을 이름 있는 SSE 이벤트로 만든다."""
-    return f"event: {name}\ndata: {json.dumps(session_ids)}\n\n".encode("utf-8")
+def _event(name: str, value) -> bytes:
+    """값을 이름 있는 SSE 이벤트로 만든다.
+
+    형을 묻지 않는다 — 목록인 것과 문자열인 것이 함께 흐르고, 이름별로 분기를 두면
+    이벤트가 늘 때마다 그 분기가 자란다. 형을 아는 자리는 값을 만드는 쪽과 읽는 쪽에
+    이미 있다.
+    """
+    return f"event: {name}\ndata: {json.dumps(value)}\n\n".encode("utf-8")
 
 
 class Lifecycle:
@@ -128,18 +134,18 @@ class Lifecycle:
             self._closed()
 
     def _pump(self, handler) -> None:
-        """끊길 때까지 코멘트와 두 세션 목록을 쓴다.
+        """끊길 때까지 코멘트와 세션 상태 셋을 쓴다.
 
         `sleep`으로 기다리지 않는다 — 그러면 그 사이에 탭이 닫혀도 다음 쓰기까지 모른다.
         `select`로 소켓을 감시하면 클라이언트가 닫는 순간 읽기 가능이 되어 그 자리에서
         끊김을 안다. SSE는 클라이언트가 아무것도 보내지 않으므로 읽기 가능은 곧 종료다.
 
-        각 목록은 **직전에 보낸 것과 다를 때만** 보낸다. 매 틱 보내면 화면이 아무것도
+        각 값은 **직전에 보낸 것과 다를 때만** 보낸다. 매 틱 보내면 화면이 아무것도
         변하지 않았는데 계속 다시 그려진다. `sent`가 비어 시작하는 덕에 접속 직후 한 번은
         반드시 나간다 — 빈 목록도 사실이므로 알려야 한다.
         """
         connection = handler.connection
-        sent: dict[str, list[str]] = {}
+        sent: dict[str, object] = {}
         next_ping = 0.0
         while True:
             now = time.monotonic()

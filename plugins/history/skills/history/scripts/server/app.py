@@ -32,6 +32,7 @@ from server.api import (  # noqa: E402
     handle_auto_memory_discard, handle_config_reset, handle_config_save,
     handle_session_rename, handle_sessions_delete)
 from server.lifecycle import Lifecycle  # noqa: E402
+from server.live import session_for_pid  # noqa: E402
 from store.layout import ensure_dirs, index_path, server_file  # noqa: E402
 from viewer.render import attach_rebuild, recorded_ids, refresh  # noqa: E402
 
@@ -70,6 +71,45 @@ def write_server_info(project_root: Path, info: dict) -> None:
     server_file(project_root).write_text(
         json.dumps(info, ensure_ascii=False), encoding="utf-8"
     )
+
+
+def window_pid() -> int:
+    """`/history`를 실행한 Claude Code 창의 pid. 알 수 없으면 0.
+
+    `CLAUDE_PID`는 Claude Code가 자식에게 물려주는 값이고 **문서화된 인터페이스가 아니다.**
+    없거나 정수가 아니면 0을 돌려주고, 그때 현재 세션은 `.server`의 세션 UUID로 떨어진다.
+
+    부모 프로세스 체인을 올라가지 않는다. 그러려면 Windows는 프로세스 스냅샷을, Linux는
+    `/proc`을, macOS는 그 둘 다 아닌 것을 봐야 한다 — 이 스킬의 OS 분기는 전부
+    `os.name == "nt"` 이분법인데 거기서 처음으로 삼분법이 생긴다. 환경변수 하나가 세
+    OS에서 같은 한 줄이다.
+
+    `main.py`가 아니라 여기 있는 이유는 그 파일에 테스트가 없기 때문이다. 검증할 수 없는
+    자리에 판정을 두면 그것이 조용히 틀려도 아무것도 깨지지 않는다.
+
+    Returns:
+        int: 창의 pid. 알 수 없으면 0
+    """
+    raw = os.environ.get("CLAUDE_PID", "")
+    return int(raw) if raw.isdigit() else 0
+
+
+def _session_fields(session_id: str, pid: int) -> dict:
+    """`.server`에 담는 현재 세션 두 필드.
+
+    세션 UUID와 **그것을 보고 있는 창의 pid**를 함께 적는다. UUID만으로는 `/resume` 뒤에
+    그 창을 되찾을 수 없다 — 그때 UUID는 이미 다른 것으로 갈렸다.
+
+    같은 파일의 `pid`는 서버 프로세스의 것이므로 이름을 갈라 둔다.
+
+    Args:
+        session_id (str): `/history`를 실행한 세션 UUID
+        pid (int): 그 창의 pid. 알 수 없으면 0
+
+    Returns:
+        dict: `session_id`·`session_pid` 두 키
+    """
+    return {"session_id": session_id, "session_pid": pid}
 
 
 def release_server_file(project_root: Path, pid: int) -> None:
@@ -343,17 +383,31 @@ class Server(ThreadingHTTPServer):
         self.lifecycle = Lifecycle(self, **grace)
 
     def current_session_id(self) -> str:
-        """현재 세션 UUID를 `.server`에서 다시 읽는다.
+        """이 창이 지금 보고 있는 세션 UUID.
+
+        `.server`의 `session_pid`로 **레지스트리에 되묻는다.** 그 파일의 `session_id`를
+        그대로 쓰지 않는 이유는 `/resume`이다 — 같은 창이 세션을 갈아타면 그 값은 이미
+        그 창의 것이 아니고, 뷰어의 `현재`가 옛 세션에 남고 가드는 그 창이 쓰지 않는
+        세션을 계속 보호한다. 창의 정체성은 pid이므로 pid를 붙잡아 요청마다 되묻는다.
 
         환경변수를 쓰지 않는다. 서버는 분리된 자식이고 환경변수를 기동 시점에 상속하므로
         그 값은 서버를 띄운 세션의 것으로 고정된다. 서버는 탭이 열려 있는 동안 재사용되니
         다음 세션에서 `/history`를 실행하면 가드가 낡은 세션을 보호하게 된다.
 
-        부모가 재사용할 때 이 파일의 `session_id`를 갱신하므로, 요청마다 다시 읽으면
-        항상 최신이다. 요청 본문의 값을 쓰지 않는 이유는 그것이 가드의 근거를 요청자가
-        제공하는 값으로 만들어 우회 방어를 없애기 때문이다.
+        요청 본문의 값을 쓰지 않는 이유는 그것이 가드의 근거를 요청자가 제공하는 값으로
+        만들어 우회 방어를 없애기 때문이다.
+
+        레지스트리에서 창을 찾지 못하면 `session_id`로 떨어진다. 그 원본은 문서화된
+        인터페이스가 아니므로 사라질 수 있고, 그때 최악은 `/resume`을 따라가지 못하는
+        것이어야 하며 가드가 없어지는 것이어서는 안 된다.
         """
-        return read_server_info(self.project_root).get("session_id", "")
+        info = read_server_info(self.project_root)
+        pid = info.get("session_pid")
+        if isinstance(pid, int) and not isinstance(pid, bool):
+            moved = session_for_pid(pid)
+            if moved:
+                return moved
+        return info.get("session_id", "")
 
     def recorded_ids(self) -> list[str]:
         """기록이 남은 세션 UUID. 스트림이 화면에 밀어 보낸다.
@@ -365,7 +419,7 @@ class Server(ThreadingHTTPServer):
         return recorded_ids(self.current_session_id())
 
 
-def serve(project_root: Path, session_id: str = "") -> None:
+def serve(project_root: Path, session_id: str = "", pid: int = 0) -> None:
     """자식 프로세스가 하는 일. 바인딩부터 `serve_forever`까지.
 
     기동에 실패하면 `.server`에 `error` 키만 기록하고 비정상 종료한다. 자식의 표준 출력은
@@ -388,8 +442,10 @@ def serve(project_root: Path, session_id: str = "") -> None:
         "token": token,
         "started_at": datetime.now().isoformat(timespec="seconds"),
         "root": str(project_root),
-        # 현재 세션 가드가 읽는 값. 부모가 재사용할 때 이 키만 갱신한다
-        "session_id": session_id,
+        # 현재 세션 가드가 읽는 값. 부모가 재사용할 때 이 둘만 갱신한다.
+        # 창의 pid를 환경에서 직접 읽지 않고 인자로 받는다 — 그 값을 만드는 경로가
+        # 부모와 자식으로 둘이 되면 어느 쪽이 옳은지가 새 판단거리가 된다
+        **_session_fields(session_id, pid),
     })
 
     # 종료 경로가 여럿이므로(유예 만료·기동 유예·시그널) 파일 삭제를 한 곳에 모은다.
@@ -439,7 +495,7 @@ def windowless_python(search: tuple[Path, ...] | None = None) -> str:
     return sys.executable
 
 
-def _spawn(project_root: Path, session_id: str = "") -> None:
+def _spawn(project_root: Path, session_id: str = "", pid: int = 0) -> None:
     """서버를 부모와 수명이 분리된 자식으로, 창 없이 띄운다.
 
     `/history`를 실행하는 것은 Claude Code다. 명령이 반환하지 않으면 도구 호출이 블록되고,
@@ -453,7 +509,7 @@ def _spawn(project_root: Path, session_id: str = "") -> None:
     콘솔(보이지 않는)을 가지므로 부모 쪽 콘솔이 닫혀도 종료 신호가 닿지 않는다.
     """
     command = [windowless_python(), str(Path(__file__).resolve()), SERVE_FLAG,
-               str(project_root), session_id]
+               str(project_root), session_id, str(pid)]
     kwargs = {
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
@@ -468,27 +524,30 @@ def _spawn(project_root: Path, session_id: str = "") -> None:
     subprocess.Popen(command, **kwargs)
 
 
-def ensure_server(project_root: Path, session_id: str = "") -> dict:
+def ensure_server(project_root: Path, session_id: str = "", pid: int = 0) -> dict:
     """서버를 확보한다 — 살아 있으면 재사용, 아니면 새로 띄운다.
 
     부모는 health 하나만 본다. 판정 지점이 둘이면 한쪽만 갱신된다.
 
-    재사용할 때 `.server`의 `session_id`를 지금 값으로 갱신한다. 서버는 요청마다 그 파일을
-    다시 읽으므로, 이 갱신이 없으면 현재 세션 가드가 서버를 띄운 세션을 계속 보호한다.
+    재사용할 때 `.server`의 현재 세션 두 필드를 지금 값으로 갱신한다. 서버는 요청마다 그
+    파일을 다시 읽으므로, 이 갱신이 없으면 현재 세션 가드가 서버를 띄운 세션을 계속 보호한다.
 
     Raises:
         RuntimeError: STARTUP_TIMEOUT 안에 기동이 확인되지 않았다
     """
     alive = live_server(project_root)
     if alive:
-        if alive.get("session_id") != session_id:
-            alive["session_id"] = session_id
+        fields = _session_fields(session_id, pid)
+        # 세션 UUID가 같아도 창이 다를 수 있다 — 두 창이 같은 세션을 열고 있으면 그렇다.
+        # 둘을 함께 견주지 않으면 그때 갱신이 일어나지 않는다
+        if any(alive.get(key) != value for key, value in fields.items()):
+            alive.update(fields)
             write_server_info(project_root, alive)
         return alive
 
     # stale 파일을 지운다. 남겨 두면 다음 판별이 죽은 포트를 다시 찔러본다
     server_file(project_root).unlink(missing_ok=True)
-    _spawn(project_root, session_id)
+    _spawn(project_root, session_id, pid)
 
     deadline = time.monotonic() + STARTUP_TIMEOUT
     while time.monotonic() < deadline:
@@ -511,9 +570,14 @@ def open_viewer(info: dict) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) in (3, 4) and sys.argv[1] == SERVE_FLAG:
-        serve(Path(sys.argv[2]), sys.argv[3] if len(sys.argv) == 4 else "")
+    # 인자는 뒤에서부터 생략할 수 있다. 부모는 늘 셋을 넘기지만, 손으로 실행해 볼 때
+    # 세션 ID와 창 pid 없이도 서버가 뜨는 쪽이 낫다
+    if len(sys.argv) in (3, 4, 5) and sys.argv[1] == SERVE_FLAG:
+        given = sys.argv[3:]
+        serve(Path(sys.argv[2]),
+              given[0] if given else "",
+              int(given[1]) if len(given) > 1 and given[1].isdigit() else 0)
     else:
-        print(f"사용법: {Path(__file__).name} {SERVE_FLAG} {{프로젝트 루트}} [{{세션 ID}}]",
-              file=sys.stderr)
+        print(f"사용법: {Path(__file__).name} {SERVE_FLAG} {{프로젝트 루트}} "
+              f"[{{세션 ID}} [{{창 pid}}]]", file=sys.stderr)
         sys.exit(2)

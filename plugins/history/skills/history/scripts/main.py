@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn
 
-from server.app import ensure_server, open_viewer, viewer_url
+from server.app import ensure_server, open_viewer, viewer_url, window_pid
 from viewer.render import refresh
 
 # CLI가 인식하는 유일한 인자. 별칭을 두지 않는다.
@@ -64,8 +64,9 @@ def run(session_id: str, rebuild: bool) -> None:
     project_root = Path.cwd()
     try:
         refresh(project_root, session_id, rebuild)
-        # 세션 ID를 넘겨 `.server`에 기록·갱신한다. 서버의 현재 세션 가드가 그것을 읽는다
-        info = ensure_server(project_root, session_id)
+        # 세션 ID와 **이 창의 pid**를 넘겨 `.server`에 기록·갱신한다. 서버는 그 pid로
+        # 레지스트리에 되물어 창이 지금 보고 있는 세션을 안다 — `/resume`을 따라가는 근거다
+        info = ensure_server(project_root, session_id, window_pid())
     except RuntimeError as exc:
         fail(str(exc))
     open_viewer(info)

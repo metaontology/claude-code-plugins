@@ -107,23 +107,51 @@
   }
 
   /* 살아 있는 목록은 셸이 SSE로 받아 App.live에 둔다. embed에 없으므로 첫 페인트에서는
-     비어 있고, file://에서는 끝까지 비어 있다 */
+     비어 있고, file://에서는 끝까지 비어 있다.
+
+     **창 하나에 원소 하나이므로 같은 id가 여럿일 수 있다** — 창 둘이 같은 세션을 열고
+     있는 상태다. 존재 판정은 그래도 그대로다 */
   function isLive(id) {
     return (App.live || []).indexOf(id) >= 0;
   }
 
+  // 그 세션을 열고 있는 창 수. 존재 판정과 같은 배열을 보므로 둘이 갈라질 여지가 없다
+  function liveCount(id) {
+    return (App.live || []).filter((live) => live === id).length;
+  }
+
   /* 살아 있는 세션에는 **모두 같은 자리에 같은 배지**가 붙는다. 현재 세션도 예외가
      아니다 — "지금 무엇이 돌고 있는가"는 한 열을 위에서 아래로 훑어 답이 나와야 하고,
-     현재 세션만 다른 표식을 달면 그 열에 구멍이 생긴다 */
+     현재 세션만 다른 표식을 달면 그 열에 구멍이 생긴다.
+
+     창이 둘 이상이면 그 수를 뒤에 붙인다. 두 창의 발언이 한 jsonl에 섞여 쌓이는데
+     화면이 그 사실을 말하지 않으면 사용자는 모르고 계속한다. **1일 때는 붙이지 않는다** —
+     거의 모든 행이 그 상태이므로 `1`은 정보를 더하지 않고 자리만 차지한다 */
   function liveBadge(id) {
-    return isLive(id) ? el('span', '● 실행중', 'srow-live') : null;
+    const count = liveCount(id);
+    if (!count) return null;
+    if (count < 2) return el('span', '● 실행중', 'srow-live');
+    const badge = el('span', `● 실행중 ${count}`, 'srow-live');
+    badge.title = `이 세션을 ${count}곳에서 동시에 열고 있습니다.`;
+    return badge;
+  }
+
+  /* 이 창이 지금 보고 있는 세션. 셸이 SSE로 받아 App.current에 두고, 아직 오지 않았으면
+     null이므로 embed에 굳은 값(이 파일을 만든 세션)으로 떨어진다.
+
+     **판정하는 자리를 여기 하나로 모은다.** 배지와 체크박스 부재가 같은 사실을 따로
+     계산하면 한쪽만 폴백을 빠뜨렸을 때 배지도 체크박스도 없는 행이 생긴다 */
+  function currentId() {
+    return App.current === null ? (App.data.current || '') : App.current;
   }
 
   /* 현재 세션 표식은 둘째 줄 오른쪽 끝에 따로 둔다. 실행중과 **뜻이 다르기 때문이다** —
-     하나는 "돌고 있다"이고 하나는 "이 화면을 연 것이 그것이다"이다. 같은 자리를 놓고
-     다투게 두면 둘 중 하나를 못 쓰게 된다 */
+     하나는 "돌고 있다"이고 하나는 "이 화면을 연 창이 지금 보고 있는 것이 그것이다"이다.
+     같은 자리를 놓고 다투게 두면 둘 중 하나를 못 쓰게 된다.
+
+     세션에 붙는 것이 아니라 창을 따라다니므로, `/resume`으로 옮기면 배지도 옮겨간다 */
   function currentBadge(id) {
-    return id === App.data.current ? el('span', '현재', 'srow-now') : null;
+    return id === currentId() ? el('span', '현재', 'srow-now') : null;
   }
 
   /* 아이콘만으로는 무엇을 센 값인지 알 수 없다. 목록 행의 절대 시각과 같은 방식으로
@@ -770,7 +798,7 @@
        이미 말한다. 두 판정이 갈라지지 않도록 currentBadge · liveBadge와 같은 근거를
        같은 순서로 본다 */
     blocked(id) {
-      if (id === App.data.current) return '진행 중인 세션';
+      if (id === currentId()) return '진행 중인 세션';
       return isLive(id) ? '실행 중인 세션' : '';
     },
     // 목록을 여기서 다시 그리지 않는다. 파괴적 연산 UI가 App.refresh()를 부른다

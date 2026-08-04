@@ -15,7 +15,12 @@ import sys
 import pytest
 
 import common.paths as paths
-from server.live import is_alive, live_sessions, project_session_ids
+from server.live import (
+    is_alive,
+    live_sessions,
+    project_session_ids,
+    session_for_pid,
+)
 
 ALIVE = os.getpid()
 
@@ -91,6 +96,11 @@ def test_project_session_ids_empty_when_dir_missing(tmp_path, monkeypatch):
     assert project_session_ids(tmp_path) == []
 
 
+def test_session_for_pid_empty_when_dir_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(paths, "LIVE_SESSIONS_DIR", tmp_path / "없는디렉토리")
+    assert session_for_pid(ALIVE) == ""
+
+
 # ── 생존 ───────────────────────────────────────────────────────────────────
 
 def test_is_alive_true_for_self():
@@ -151,3 +161,54 @@ def test_project_session_ids_sorted(registry, tmp_path):
     for name, session_id in (("30.json", "ccc"), ("10.json", "aaa"), ("20.json", "bbb")):
         registry(name, _entry(session_id, root))
     assert project_session_ids(root) == ["aaa", "bbb", "ccc"]
+
+
+# ── 창의 지금 ──────────────────────────────────────────────────────────────
+# 창의 정체성은 pid다. 세션 UUID는 `/resume`으로 갈아탈 수 있으므로 창을 가리키지 못한다.
+# 반대 방향(세션으로 창을 찾는 것)은 두지 않는다 — 여러 창이 같은 세션을 열고 있으면
+# 후보가 여럿이고 어느 것이 `/history`를 실행한 창인지 가릴 근거가 레지스트리에 없다
+
+def test_session_for_pid_finds_session(registry, tmp_path):
+    registry("1.json", _entry("보고있는세션", tmp_path))
+    assert session_for_pid(ALIVE) == "보고있는세션"
+
+
+def test_session_for_pid_empty_for_unknown_pid(registry, tmp_path, dead_pid):
+    registry("1.json", _entry("보고있는세션", tmp_path))
+    assert session_for_pid(dead_pid) == ""
+
+
+def test_session_for_pid_follows_resume(registry, tmp_path):
+    """`/resume`은 **같은 pid 항목의 `sessionId`만** 갈아 끼운다.
+
+    이 파일에서 pid 역조회의 이유가 전부 여기 있다. 이것이 없으면 누군가
+    `session_for_pid`를 `.server`에 적힌 세션 ID를 돌려주는 것으로 "단순화"했을 때
+    아무 테스트도 깨지지 않고, 대신 뷰어의 `현재`가 다시 옛 세션에 붙는다.
+    """
+    registry("1.json", _entry("옮기기전", tmp_path))
+    assert session_for_pid(ALIVE) == "옮기기전"
+    registry("1.json", _entry("옮긴뒤", tmp_path))
+    assert session_for_pid(ALIVE) == "옮긴뒤"
+
+
+# ── 창 수 ──────────────────────────────────────────────────────────────────
+# 창 둘이 같은 세션을 열 수 있다. 집합으로 접으면 그 사실이 사라지고, 화면은 한 세션을
+# 두 곳에서 쓰고 있다는 것을 영원히 말하지 못한다
+
+def test_project_session_ids_keeps_one_per_window(registry, tmp_path):
+    """**창 하나에 원소 하나다.** 같은 세션을 두 창이 열면 두 번 담긴다."""
+    root = tmp_path / "proj"
+    registry("1.json", _entry("함께보는세션", root))
+    registry("2.json", _entry("함께보는세션", root))
+    registry("3.json", _entry("혼자보는세션", root))
+    assert project_session_ids(root) == ["함께보는세션", "함께보는세션", "혼자보는세션"]
+
+
+def test_project_session_ids_drops_one_when_window_leaves(registry, tmp_path):
+    """창이 하나 떨어지면 한 번으로 줄어든다 — 스트림이 이 차이로 이벤트를 보낸다."""
+    root = tmp_path / "proj"
+    registry("1.json", _entry("함께보는세션", root))
+    registry("2.json", _entry("함께보는세션", root))
+    assert project_session_ids(root) == ["함께보는세션", "함께보는세션"]
+    (registry.dir / "2.json").unlink()
+    assert project_session_ids(root) == ["함께보는세션"]

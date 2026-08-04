@@ -140,6 +140,12 @@ def add_live(tmp_path, name: str, session_id: str) -> None:
                     "cwd": str(tmp_path)}), encoding="utf-8")
 
 
+def set_window(tmp_path, pid: int) -> None:
+    """`.server`에 창의 pid를 적는다 — 현재 세션을 레지스트리에 되묻는 근거다."""
+    server_file(tmp_path).write_text(
+        json.dumps({"session_id": SESSION, "session_pid": pid}), encoding="utf-8")
+
+
 def test_live_streams_comments(server):
     """열린 채 유지되고 일정 간격으로 코멘트 줄이 도착한다."""
     response = open_live(server.server_address[1])
@@ -188,6 +194,22 @@ def test_live_sends_new_event_when_registry_changes(server, tmp_path):
         response.close()
 
 
+def test_live_sends_event_when_window_joins_same_session(server, tmp_path):
+    """**같은 세션에 창이 하나 더 붙어도 변화다.**
+
+    목록을 집합으로 접으면 이 이벤트가 나가지 않고, 화면은 그 세션을 두 곳에서 쓰고
+    있다는 것을 영원히 모른다.
+    """
+    add_live(tmp_path, "1.json", "aaa")
+    response = open_live(server.server_address[1])
+    try:
+        assert read_event(response) == ["aaa"]
+        add_live(tmp_path, "2.json", "aaa")
+        assert read_event(response, limit=200) == ["aaa", "aaa"]
+    finally:
+        response.close()
+
+
 def test_live_sends_event_when_session_disappears(server, tmp_path):
     """줄어드는 것도 변화다 — 그래야 화면이 체크박스를 되돌려 준다."""
     add_live(tmp_path, "1.json", "aaa")
@@ -201,10 +223,11 @@ def test_live_sends_event_when_session_disappears(server, tmp_path):
 
 
 def test_stream_stays_silent_while_nothing_changes(server):
-    """두 목록이 모두 그대로면 보내지 않는다. 매 틱 보내면 화면이 계속 다시 그려진다."""
+    """셋이 모두 그대로면 보내지 않는다. 매 틱 보내면 화면이 계속 다시 그려진다."""
     response = open_live(server.server_address[1])
     try:
         assert read_event(response) == []
+        assert read_event(response, "current") == SESSION
         assert read_event(response, "known") == [SESSION]
         # 폴링 틱이 여러 번 지나는 동안 코멘트만 와야 한다
         for _ in range(12):
@@ -261,6 +284,38 @@ def test_known_excludes_live_session_without_record(server, tmp_path):
     try:
         assert read_event(response) == ["cccccccc-0000-0000-0000-000000000000"]
         assert read_event(response, "known") == [SESSION]
+    finally:
+        response.close()
+
+
+# ── 현재 세션을 민다 ───────────────────────────────────────────────────────
+# 창은 `/resume`으로 세션을 갈아탄다. 산출물에 굳은 값은 그 순간부터 그 창의 것이 아니고,
+# 화면이 그 사실을 알 통로도 이미 열려 있는 이 연결뿐이다
+
+MOVED = "dddddddd-0000-0000-0000-000000000000"
+
+
+def test_current_sends_window_session_on_connect(server, tmp_path):
+    """접속 직후 반드시 한 번 온다. 담기는 것은 창이 **지금** 보고 있는 세션이다."""
+    add_live(tmp_path, "1.json", SESSION)
+    set_window(tmp_path, os.getpid())
+    response = open_live(server.server_address[1])
+    try:
+        assert read_event(response, "current") == SESSION
+    finally:
+        response.close()
+
+
+def test_current_follows_window_across_resume(server, tmp_path):
+    """창이 세션을 갈아타면 새 이벤트가 온다 — 이 스트림의 존재 이유다."""
+    add_live(tmp_path, "1.json", SESSION)
+    set_window(tmp_path, os.getpid())
+    response = open_live(server.server_address[1])
+    try:
+        assert read_event(response, "current") == SESSION
+        # `/resume` — 같은 pid 항목의 `sessionId`만 갈린다
+        add_live(tmp_path, "1.json", MOVED)
+        assert read_event(response, "current", limit=200) == MOVED
     finally:
         response.close()
 

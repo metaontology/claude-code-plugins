@@ -48,8 +48,10 @@ def handle_sessions_delete(server, body: bytes) -> tuple[int, dict]:
         return 409, {"error": "현재 프로젝트의 세션 디렉토리를 찾을 수 없습니다"}
 
     # 살아 있는 목록을 요청 시점에 다시 읽는다. 화면이 보내온 값을 쓰면 가드의 근거를
-    # 요청자가 제공하게 되어 우회 방어가 사라진다 — 현재 세션을 `.server`에서 다시 읽는
-    # 것과 같은 이유다
+    # 요청자가 제공하게 되어 우회 방어가 사라진다 — 현재 세션을 요청마다 다시 읽는
+    # 것과 같은 이유다.
+    # `set`으로 접는 자리가 여기다. 목록은 창 하나에 원소 하나여서 중복이 있는데,
+    # 가드가 묻는 것은 "살아 있는가" 하나여서 개수가 답을 바꾸지 않는다
     live_ids = set(project_session_ids(server.project_root))
     results = delete_sessions(targets, slug, current_id, live_ids)
     _rebuild_if_any(server, results)

@@ -19,6 +19,7 @@ from server.app import (
     probe_health,
     read_server_info,
     viewer_url,
+    window_pid,
     windowless_python,
     write_server_info,
 )
@@ -415,7 +416,7 @@ def test_ensure_server_reuses_live_server(tmp_path):
 
 def test_ensure_server_reports_startup_failure(tmp_path, monkeypatch):
     """자식이 남긴 사유를 부모가 읽어 보고한다."""
-    def fake_spawn(project_root, session_id=""):
+    def fake_spawn(project_root, session_id="", pid=0):
         write_server_info(project_root, {"error": "후보 포트가 전부 점유되어 있습니다"})
 
     monkeypatch.setattr(app, "_spawn", fake_spawn)
@@ -452,5 +453,103 @@ def test_reuse_updates_session_id(tmp_path):
         second = ensure_server(tmp_path, "sess-B")
         assert second["pid"] == first["pid"]  # 새 서버가 뜨지 않았다
         assert read_server_info(tmp_path)["session_id"] == "sess-B"
+    finally:
+        os.kill(first["pid"], signal.SIGTERM)
+
+
+# ── 현재 세션 추적 ─────────────────────────────────────────────────────────
+# 창은 `/resume`으로 세션을 갈아탄다. 그래서 현재 세션은 `.server`에 적힌 값이 아니라
+# 그 창의 pid로 레지스트리에 되물어 얻는다. 내 창의 pid는 `CLAUDE_PID`가 말한다
+
+def test_window_pid_reads_environment(monkeypatch):
+    monkeypatch.setenv("CLAUDE_PID", "12956")
+    assert window_pid() == 12956
+
+
+def test_window_pid_zero_when_missing(monkeypatch):
+    """`CLAUDE_PID`는 문서화된 인터페이스가 아니다. 없으면 추적을 포기하고 0을 준다."""
+    monkeypatch.delenv("CLAUDE_PID", raising=False)
+    assert window_pid() == 0
+
+
+def test_window_pid_zero_when_not_a_number(monkeypatch):
+    monkeypatch.setenv("CLAUDE_PID", "열두시")
+    assert window_pid() == 0
+
+
+def test_spawned_child_records_window_pid(tmp_path):
+    """부모가 읽은 창의 pid를 자식이 `.server`에 적는다.
+
+    자식이 환경변수를 직접 읽지 않으므로, 이 값은 부모가 인자로 넘긴 것이어야 한다.
+    """
+    info = ensure_server(tmp_path, "sess-A", 4242)
+    try:
+        assert read_server_info(tmp_path)["session_pid"] == 4242
+    finally:
+        os.kill(info["pid"], signal.SIGTERM)
+
+@pytest.fixture
+def window(tmp_path, monkeypatch):
+    """레지스트리를 갈아 끼운 서버 객체. `(서버, 루트, 등록함수)`를 준다.
+
+    `serve_forever`를 돌리지 않는다 — 이 묶음이 보는 것은 요청 처리가 아니라
+    `current_session_id()`의 판정 하나다.
+    """
+    import common.paths as paths
+
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    monkeypatch.setattr(paths, "LIVE_SESSIONS_DIR", sessions)
+
+    root = tmp_path / "project"
+    root.mkdir()
+    instance = Server(_listen(), root, TOKEN)
+
+    def register(pid: int, session_id: str) -> None:
+        (sessions / f"{pid}.json").write_text(
+            json.dumps({"pid": pid, "sessionId": session_id, "cwd": str(root)}),
+            encoding="utf-8")
+
+    yield instance, root, register
+    instance.server_close()
+
+
+def test_current_session_id_follows_window(window):
+    """창이 지금 보고 있는 세션을 돌려준다 — 기록된 값이 아니다."""
+    instance, root, register = window
+    register(os.getpid(), "옮긴뒤")
+    write_server_info(root, {"session_id": "옮기기전", "session_pid": os.getpid()})
+    assert instance.current_session_id() == "옮긴뒤"
+
+
+def test_current_session_id_falls_back_when_window_gone(window):
+    """레지스트리에서 창을 찾지 못하면 기록된 세션으로 떨어진다.
+
+    레지스트리는 문서화된 인터페이스가 아니므로 사라질 수 있다. 그때 최악은
+    `/resume`을 따라가지 못하는 것이어야 하고, 가드가 없어지는 것이어서는 안 된다.
+    """
+    instance, root, _ = window
+    write_server_info(root, {"session_id": "기록된세션", "session_pid": os.getpid()})
+    assert instance.current_session_id() == "기록된세션"
+
+
+def test_current_session_id_falls_back_without_session_pid(window):
+    """`session_pid`가 없는 `.server`도 같다."""
+    instance, root, register = window
+    register(os.getpid(), "다른세션")
+    write_server_info(root, {"session_id": "기록된세션"})
+    assert instance.current_session_id() == "기록된세션"
+
+
+def test_reuse_updates_session_pid(tmp_path):
+    """재사용이 창의 pid도 갱신한다.
+
+    세션 ID만 갱신하면 다음 요청이 옛 창에 되묻는다. 두 창이 같은 세션을 열고 있을 때는
+    세션 ID가 같은데 창이 다를 수도 있으므로, 두 필드를 함께 견줘야 한다.
+    """
+    first = ensure_server(tmp_path, "sess-A", 4242)
+    try:
+        ensure_server(tmp_path, "sess-B", 7777)
+        assert read_server_info(tmp_path)["session_pid"] == 7777
     finally:
         os.kill(first["pid"], signal.SIGTERM)
