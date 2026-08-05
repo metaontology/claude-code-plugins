@@ -1,0 +1,68 @@
+/* 컨텍스트 게이지 — 대화 머리의 한 줄.
+ *
+ * 목록 행의 칸은 여기에 없다. `30-session.css`의 `.srow-count`를 그대로 물려받으므로
+ * `min-width`와 툴팁 규약이 한 자리에만 있다.
+ */
+
+/* ── 대화 머리의 게이지 줄 ──────────────────────────────────────────────── */
+
+/* `.shead-meta` 안에 넣지 않는다. 그 줄에는 `span + span::before { content: "· " }`가
+   있어서 막대가 가운뎃점으로 이어 붙고, 게이지가 시각·ID와 같은 무게로 선다 */
+.shead-usage {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* 이 줄의 항목은 게이지와 모델 둘뿐이고 사이가 gap으로 갈린다.
+   `· ` 구분자를 넣지 않는 이유다 */
+
+.usage-num {
+  /* 숫자 폭을 고르게 만든다. 없으면 세션을 옮길 때마다 대괄호의 자리가 흔들린다 */
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.usage-model {
+  color: var(--fg);
+}
+
+/* ── 막대 ────────────────────────────────────────────────────────────────── */
+
+/* 폭을 px로 못 박는다. `13ch`로 두면 글꼴 대체가 일어난 화면에서 폭이 흔들린다.
+   104px은 dash-statusline의 13칸과 비슷한 눈금 감각을 내는 값이다 */
+.usage-bar {
+  display: inline-block;
+  width: 104px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+  /* baseline에 앉으면 글자 아래로 처진다. 줄이 flex이므로 align-items가 이미 맞춘다 */
+  flex: 0 0 auto;
+}
+
+.usage-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ── 90% 이상 ────────────────────────────────────────────────────────────── */
+
+/* 줄에 붙이고 하위 둘이 색을 받는다. 팔레트에 이미 있는 `--warn-fg`를 쓴다 —
+   게이지만을 위한 색을 더하면 그 색이 이 화면의 다른 무엇과도 관계를 맺지 않은 채 선다 */
+.usage-hot .usage-fill { background: var(--warn-fg); }
+.usage-hot .usage-num { color: var(--warn-fg); }
+
+/* ── 표에 없는 모델 ──────────────────────────────────────────────────────── */
+
+/* 사람이 할 일이 있다는 표식이다. `MODEL_WINDOWS`에 한 줄 더하면 사라진다 */
+.usage-flag {
+  color: var(--warn-fg);
+  cursor: help;
+}

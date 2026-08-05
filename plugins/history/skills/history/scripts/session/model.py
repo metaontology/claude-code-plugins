@@ -16,6 +16,7 @@ from common.jsonl import (
     get_session_start,
     parse_jsonl,
 )
+from session.usage import session_usage
 
 # 라벨 최대 길이. 넘으면 잘린 분량을 표시한다
 LABEL_LIMIT = 200
@@ -301,6 +302,7 @@ def build_session(jsonl_path: Path) -> dict:
         "skills": scanned["skills"],
         "commands": scanned["commands"],
         "entries": scanned["entries"],
+        "usage": session_usage(records),
     }
 
 

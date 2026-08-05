@@ -225,6 +225,8 @@
     meta.appendChild(when);
     meta.appendChild(countNode(`💬 ${session.user_count}`, '사용자 프롬프트 수'));
     meta.appendChild(countNode(`📄 ${(session.files || []).length}`, '건드린 파일 수'));
+    // 컨텍스트 사용량은 25-usage.js가 갖는다. 그 칸도 `.srow-count`이므로 세로 줄이 이어진다
+    meta.appendChild(Usage.badge(session));
     const here = currentBadge(session.id);
     if (here) meta.appendChild(here);
     row.appendChild(meta);
@@ -459,6 +461,9 @@
     line.appendChild(el('span', `${session.id.slice(0, 8)}…`, 'shead-id'));
     line.appendChild(copyButton(session.id));
     head.appendChild(line);
+    // 게이지 줄. 응답 기록이 없는 세션에서는 null이므로 아무것도 서지 않는다
+    const usage = Usage.gauge(session);
+    if (usage) head.appendChild(usage);
     return head;
   }
 
