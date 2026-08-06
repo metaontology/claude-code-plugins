@@ -163,6 +163,28 @@
   cursor: pointer;
 }
 
+/* "세션 폴더 열기" 아이콘 버튼. `#revealProject`(00-base.css)와 아이콘·크기·색을 그대로
+   맞춘다 — 같은 동작(탐색기로 열기)이므로 같은 그림으로 보여야 한다. 다른 것은 `.shead-meta`가
+   `align-items: center`라 `#revealProject`의 baseline 보정용 `translateY`가 필요 없다는
+   점뿐이다(실측: `getBoundingClientRect().centerY`가 `.shead-id`·`.shead-copy`와 0.01px
+   차이로 이미 맞는다) */
+.shead-reveal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.shead-reveal:hover {
+  color: var(--accent);
+}
+
 /* ── 매치 사이 이동 ─────────────────────────────────────────────────────── */
 /* 매치가 하나도 없으면 이 줄 자체가 없다 */
 

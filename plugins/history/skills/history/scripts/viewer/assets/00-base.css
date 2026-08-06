@@ -210,6 +210,47 @@ body {
   white-space: nowrap;
 }
 
+/* 경로 오른쪽의 "탐색기에서 보기" 버튼. `.tb-icon`(30px)을 그대로 쓰지 않는다 — 이 줄은
+   `baseline` 정렬에 11.5~15px 글자들이 서 있어 그만한 정사각형을 넣으면 줄 높이가 벌어진다.
+   `align-self: center`로 자기만 가운데 두어 글자들의 밑선에 영향을 주지 않는다.
+
+   `#brand`의 `gap: 9px`는 스킬명·구분선·이름·경로 사이에는 맞는 간격이지만 이 버튼까지
+   그만큼 떨어지면 "경로에 붙은 조작"이 아니라 "다음 항목"으로 읽힌다. 음수
+   `margin-left`로 그 간격만 한 칸(스페이스 하나) 정도로 줄인다 — 컨테이너의 `gap`을
+   건드리면 앞의 셋도 함께 좁아진다.
+
+   `align-self: center`는 이 줄의 **전체 줄 높이**(가장 큰 글자인 `#project`의 자간까지
+   포함) 안에서 가운데를 잡는다. 그런데 `#projectPath`는 그보다 작은 글자라 자기 줄
+   안에서의 시각적 중심이 그 전체 중심보다 아래에 있다 — 그대로 두면 아이콘이 경로
+   글자보다 살짝 위에 뜬 것처럼 보인다. `translateY`로 그 차이(실측 약 1.3px)만큼만
+   내려 `#projectPath`의 글자 중심에 맞춘다. 값은 `Range.getBoundingClientRect()`로
+   글자 중심과 아이콘 중심을 재서 나온 것이다(`docs/guides/뷰어-실물관측.md`의 재는 법과
+   같다) */
+#revealProject {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-left: -6px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transform: translateY(1.3px);
+}
+
+/* display를 지정했으므로 hidden 속성만으로는 숨겨지지 않는다 — 다른 아이콘 버튼과 같다 */
+#revealProject[hidden] { display: none; }
+
+#revealProject:hover {
+  color: var(--accent);
+}
+
 /* ── 도구 모음 ──────────────────────────────────────────────────────────── */
 /* 목록을 조작하는 것들이 한 줄에 모인다 — 왼쪽에 선택 상태와 실행 버튼, 가운데에 검색창,
    오른쪽에 전역 동작 버튼. **검색창이 늘 있으므로 이 단은 사라지지 않는다.** 체크할 때만

@@ -136,7 +136,29 @@ def test_payload_keys(env):
     root, _ = env
     payload = embed_payload(root, SLUG, SESSION)
     assert set(payload) == {"project", "sessions_dir", "current", "sessions",
-                            "memory", "local_skills"}
+                            "memory", "local_skills", "reveal_supported"}
+
+
+def test_reveal_supported_true_on_windows(monkeypatch):
+    """탐색기 버튼은 Windows·Mac에서만 그려진다 — 그 판정 근거.
+
+    `embed_payload` 전체가 아니라 `_reveal_supported()`만 부른다. `os.name`을 바꾼 채
+    `local_skill_names`가 `Path`를 만들면 실제 플랫폼과 어긋나 `UnsupportedOperation`이 난다.
+    """
+    monkeypatch.setattr(render.os, "name", "nt")
+    assert render._reveal_supported() is True
+
+
+def test_reveal_supported_true_on_mac(monkeypatch):
+    monkeypatch.setattr(render.os, "name", "posix")
+    monkeypatch.setattr(render.platform, "system", lambda: "Darwin")
+    assert render._reveal_supported() is True
+
+
+def test_reveal_supported_false_elsewhere(monkeypatch):
+    monkeypatch.setattr(render.os, "name", "posix")
+    monkeypatch.setattr(render.platform, "system", lambda: "Linux")
+    assert render._reveal_supported() is False
 
 
 def test_payload_carries_current_session(env):

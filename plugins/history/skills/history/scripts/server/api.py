@@ -5,7 +5,11 @@
 설정도 같다 — 읽기는 산출물에 심겨 오고 여기서는 쓰기만 받는다.
 """
 import json
+import os
+import platform
+import subprocess
 
+import common.paths as paths
 from auto_memory.discard import discard_items
 from auto_memory.model import memory_dir
 from common.jsonl import find_project_slug
@@ -178,6 +182,59 @@ def handle_config_reset(server, body: bytes) -> tuple[int, dict]:
     reset_config()
     _rebuild(server)
     return 200, {"config": with_defaults({})}
+
+
+def parse_reveal_target(body: bytes) -> str:
+    """요청 본문에서 대상 열거값을 꺼낸다. `project` 또는 `sessions_dir`만 허용한다.
+
+    경로 문자열을 요청에서 받지 않는다. 서버가 이미 아는 두 값 중 하나만 고르게 해야
+    로컬 서버라도 임의 디렉토리를 여는 통로가 생기지 않는다.
+
+    Raises:
+        ValueError: JSON이 아니거나, `target`이 두 열거값 중 하나가 아니다
+    """
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("요청 본문이 JSON이 아닙니다") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("요청 본문이 객체가 아닙니다")
+    target = payload.get("target")
+    if target not in ("project", "sessions_dir"):
+        raise ValueError("target이 project 또는 sessions_dir가 아닙니다")
+    return target
+
+
+def handle_reveal(server, body: bytes) -> tuple[int, dict]:
+    """OS 탐색기로 프로젝트 루트 또는 현재 세션의 슬러그 디렉토리를 연다.
+
+    Windows·Mac에서만 동작한다. 그 밖에서는 화면이 버튼 자체를 그리지 않지만,
+    서버도 스스로 거부한다 — 화면 판정을 신뢰하지 않는 것은 다른 엔드포인트와 같다.
+
+    OS가 지원하지 않는 것은 요청이 아니라 환경의 사정이므로 400이 아니라 200에
+    `{"ok": false}`로 답한다. 사용자 설정 저장이 실패를 같은 형태로 답하는 것과 같다.
+    """
+    try:
+        target = parse_reveal_target(body)
+    except ValueError as exc:
+        return 400, {"error": str(exc)}
+
+    if target == "project":
+        path = server.project_root
+    else:
+        current_id = server.current_session_id()
+        slug = find_project_slug(current_id) if current_id else None
+        if slug is None:
+            return 409, {"error": "현재 프로젝트의 세션 디렉토리를 찾을 수 없습니다"}
+        path = paths.PROJECTS_DIR / slug
+
+    if os.name == "nt":
+        subprocess.Popen(["explorer", str(path)])
+    elif platform.system() == "Darwin":
+        subprocess.Popen(["open", str(path)])
+    else:
+        return 200, {"ok": False, "reason": "unsupported_os"}
+    return 200, {"ok": True}
 
 
 def _rebuild_if_any(server, results: list[dict]) -> None:

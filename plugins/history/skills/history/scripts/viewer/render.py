@@ -5,6 +5,8 @@
 표시가 살아 있다.
 """
 import json
+import os
+import platform
 import re
 from pathlib import Path
 
@@ -97,7 +99,18 @@ def embed_payload(project_root: Path, slug: str, session_id: str) -> dict:
         # 화면이 skill의 내장 여부를 가르는 근거. 브라우저는 디스크를 볼 수 없으므로
         # **조립하는 이 자리에서 훑어 담는다**
         "local_skills": local_skill_names(project_root),
+        # "탐색기에서 보기" 버튼을 그릴지의 근거. 서버가 여는 수단(explorer·open)이
+        # Windows·Mac뿐이라 그 밖에서는 화면이 버튼 자체를 그리지 않는다
+        "reveal_supported": _reveal_supported(),
     }
+
+
+def _reveal_supported() -> bool:
+    """OS 탐색기를 여는 수단이 있는가. 함수로 떼어 둔 것은 테스트가 `os.name`을 바꿔도
+    이 판정만 격리해 검증하기 위해서다 — `embed_payload` 전체를 부르면 `local_skill_names`가
+    그 사이에 `Path`를 만들다 `os.name`과 실제 플랫폼의 불일치로 깨진다.
+    """
+    return os.name == "nt" or platform.system() == "Darwin"
 
 
 def _assets(pattern: str) -> str:

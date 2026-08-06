@@ -5,6 +5,7 @@
 """
 import json
 import os
+import platform
 import socket
 import threading
 import urllib.error
@@ -13,6 +14,7 @@ import urllib.request
 import pytest
 
 import common.paths as paths
+import server.api as api_module
 import store.config as user_config
 from auto_memory.model import memory_dir
 from server.api import parse_rename, parse_targets
@@ -29,6 +31,7 @@ RENAME = "/api/sessions/rename"
 DISCARD = "/api/auto-memory/discard"
 CONFIG = "/api/config"
 CONFIG_RESET = "/api/config/reset"
+REVEAL = "/api/reveal"
 
 
 @pytest.fixture
@@ -104,14 +107,14 @@ def test_parse_targets_rejects_bad_body(body):
 
 # ── 토큰 ───────────────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("path", [DELETE, RENAME, DISCARD, CONFIG])
+@pytest.mark.parametrize("path", [DELETE, RENAME, DISCARD, CONFIG, REVEAL])
 def test_no_token_is_rejected(api, path):
     server, _ = api
     status, _ = post(server.server_address[1], path, {"targets": []}, token=None)
     assert status == 403
 
 
-@pytest.mark.parametrize("path", [DELETE, RENAME, DISCARD, CONFIG])
+@pytest.mark.parametrize("path", [DELETE, RENAME, DISCARD, CONFIG, REVEAL])
 def test_wrong_token_is_rejected(api, path):
     server, _ = api
     status, _ = post(server.server_address[1], path, {"targets": []}, token="wrong")
@@ -120,7 +123,7 @@ def test_wrong_token_is_rejected(api, path):
 
 # ── 요청 형식 ──────────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("path", [DELETE, RENAME, DISCARD, CONFIG])
+@pytest.mark.parametrize("path", [DELETE, RENAME, DISCARD, CONFIG, REVEAL])
 def test_malformed_body_is_400_with_error(api, path):
     """대상별 결과를 만들 수 없으므로 results가 아니라 error를 돌려준다."""
     server, _ = api
@@ -437,3 +440,73 @@ def test_config_reset_requires_token(api):
     server, _ = api
     status, _ = post(server.server_address[1], CONFIG_RESET, {}, token=None)
     assert status == 403
+
+
+# ── 탐색기에서 보기 ────────────────────────────────────────────────────────
+# 경로 문자열은 요청에서 받지 않는다 — target 열거값 둘만 서버가 고른다
+
+def test_reveal_project_opens_project_root_on_windows(api, monkeypatch):
+    server, _ = api
+    monkeypatch.setattr(os, "name", "nt")
+    calls = []
+    monkeypatch.setattr(api_module.subprocess, "Popen", lambda cmd: calls.append(cmd))
+
+    status, payload = post(server.server_address[1], REVEAL, {"target": "project"})
+    assert status == 200
+    assert payload == {"ok": True}
+    assert calls == [["explorer", str(server.project_root)]]
+
+
+def test_reveal_sessions_dir_opens_slug_directory(api, monkeypatch):
+    server, slug_dir = api
+    monkeypatch.setattr(os, "name", "nt")
+    calls = []
+    monkeypatch.setattr(api_module.subprocess, "Popen", lambda cmd: calls.append(cmd))
+
+    status, payload = post(server.server_address[1], REVEAL, {"target": "sessions_dir"})
+    assert status == 200
+    assert payload == {"ok": True}
+    assert calls == [["explorer", str(slug_dir)]]
+
+
+def test_reveal_opens_with_open_on_mac(api, monkeypatch):
+    server, _ = api
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(platform, "system", lambda: "Darwin")
+    calls = []
+    monkeypatch.setattr(api_module.subprocess, "Popen", lambda cmd: calls.append(cmd))
+
+    status, payload = post(server.server_address[1], REVEAL, {"target": "project"})
+    assert status == 200
+    assert payload == {"ok": True}
+    assert calls == [["open", str(server.project_root)]]
+
+
+def test_reveal_unsupported_os_returns_ok_false(api, monkeypatch):
+    """리눅스 등에서는 버튼 자체가 그려지지 않지만, 서버도 스스로 답을 거부한다."""
+    server, _ = api
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+
+    status, payload = post(server.server_address[1], REVEAL, {"target": "project"})
+    assert status == 200
+    assert payload == {"ok": False, "reason": "unsupported_os"}
+
+
+def test_reveal_rejects_invalid_target_with_400(api):
+    """요청을 고치면 통과하는 사유이므로 400이다."""
+    server, _ = api
+    status, payload = post(server.server_address[1], REVEAL, {"target": "etc"})
+    assert status == 400
+    assert "error" in payload
+
+
+def test_reveal_sessions_dir_without_slug_returns_409(api):
+    """요청은 옳은데 현재 세션의 슬러그를 찾을 수 없어 거부하는 것이므로 409다."""
+    server, _ = api
+    write_server_info(server.project_root, {"pid": 1, "port": 0, "token": TOKEN,
+                                             "root": str(server.project_root),
+                                             "session_id": "no-such-session"})
+    status, payload = post(server.server_address[1], REVEAL, {"target": "sessions_dir"})
+    assert status == 409
+    assert "error" in payload

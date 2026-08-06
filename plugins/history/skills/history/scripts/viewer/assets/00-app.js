@@ -40,6 +40,18 @@
   ];
   // 경로를 지우기 전에 남겨 두는 여유. 0이면 경로가 테마 버튼에 붙어 한 줄로 뭉쳐 보인다
   const PATH_MARGIN = 8;
+  /* "외부에서 열기" 아이콘 — 사각과 거기서 빠져나가는 화살표. IDE가 "새 창에서 열기"에
+     흔히 쓰는 모양이라 익숙하다. 폴더 아이콘을 쓰지 않는다 — 그쪽은 이 화면에서 경로 옆에
+     놓였을 때 무엇을 여는지보다 "폴더가 있다"는 정보만 준다.
+
+     24×24 좌표계, `currentColor`라 테마가 뒤집혀도 글자와 같은 색을 따른다.
+     `60-toolbar.js`의 `ICON`을 재사용하지 않는다 — 각 자산이 IIFE로 스코프가 갈려 있고
+     그 파일이 이 파일보다 뒤에 로드된다 */
+  const ICON_REVEAL = '<path d="M17 13.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5.5"'
+    + ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<path d="M14 3h7v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"'
+    + ' stroke-linejoin="round"/>'
+    + '<path d="M21 3L11 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>';
   /* 설정 저장을 다시 보내는 횟수와 간격. 서버 쪽 재시도가 20ms를 쓰므로 그보다 넉넉히 두고
      기다린다 — 겹친 상대도 그 사이에 자기 교체를 마친다 */
   const SAVE_RETRIES = 2;
@@ -51,6 +63,7 @@
     brand: document.getElementById('brand'),
     project: document.getElementById('project'),
     projectPath: document.getElementById('projectPath'),
+    revealProject: document.getElementById('revealProject'),
     search: document.getElementById('search'),
     tabs: document.getElementById('tabs'),
     split: document.getElementById('split'),
@@ -535,6 +548,29 @@
     dom.favicon.href = faviconUrl(name, path);
   }
 
+  /* "탐색기에서 보기" 버튼. 서버가 여는 수단(`explorer`·`open`)이 Windows·Mac뿐이라
+     `reveal_supported`가 거짓이면 자리를 그리지 않는다 — 눌러도 아무 일이 없는 버튼을
+     남기지 않는 것은 이 화면의 다른 아이콘 버튼과 같은 규칙이다(`60-toolbar.js`).
+
+     `file://`로 열었을 때도 그리지 않는다. 서버가 없어 요청을 보낼 곳이 없다 */
+  function initReveal() {
+    if (!App.data.reveal_supported || App.readonly) return;
+    const button = dom.revealProject;
+    button.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12"'
+      + ' fill="none" aria-hidden="true">' + ICON_REVEAL + '</svg>';
+    button.title = '탐색기에서 보기';
+    button.setAttribute('aria-label', '탐색기에서 보기');
+    button.addEventListener('click', () => {
+      const token = new URLSearchParams(location.search).get('t') || '';
+      fetch(`/api/reveal?t=${encodeURIComponent(token)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: 'project' })
+      }).catch(() => {});
+    });
+    button.hidden = false;
+  }
+
   /* 파비콘을 문자열로 조립하지 않는다. 이름은 폴더명이므로 `&`나 `<`가 들어갈 수 있고,
      문자열 SVG는 그 이스케이프를 잊을 수 있는 단계로 만든다 — `innerHTML`을 쓰지 않는
      것과 같은 이유다. DOM으로 만들어 `XMLSerializer`에 넘기면 이스케이프가 브라우저 몫이 된다.
@@ -591,6 +627,9 @@
      `hidden`을 쓰는 것은 이 화면이 `#notice`에서 이미 쓰는 방식이다 */
   let pathWidth = 0;
   let pathOffset = 0;
+  // 탐색기 버튼이 경로 바로 뒤에 있으므로 그 폭도 숨김 판정에 들어가야 한다. 버튼이 없으면
+  // 0이라 이 판정은 버튼이 생기기 전과 정확히 같다
+  let revealWidth = 0;
 
   function fitPath() {
     if (!pathWidth) {
@@ -602,12 +641,15 @@
          답해 넓은 화면에서도 경로가 사라진다 */
       pathOffset = dom.projectPath.getBoundingClientRect().left
         - dom.brand.getBoundingClientRect().left;
+      if (!dom.revealProject.hidden) revealWidth = dom.revealProject.offsetWidth;
     }
-    dom.projectPath.hidden = pathOffset + pathWidth + PATH_MARGIN > dom.brand.clientWidth;
+    dom.projectPath.hidden =
+      pathOffset + pathWidth + revealWidth + PATH_MARGIN > dom.brand.clientWidth;
   }
 
   function start() {
     renderProject(App.data.project);
+    initReveal();
     fitPath();
     // 창 크기와 함께 판정을 다시 한다. `resize`가 아니라 요소를 보는 쪽이라, 나중에 머리에
     // 무엇이 더 붙어 폭이 달라지는 경우도 같은 경로로 잡힌다

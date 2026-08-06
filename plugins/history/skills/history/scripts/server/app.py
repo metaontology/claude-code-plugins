@@ -30,7 +30,7 @@ if _SCRIPTS_DIR not in sys.path:
 
 from server.api import (  # noqa: E402
     handle_auto_memory_discard, handle_config_reset, handle_config_save,
-    handle_session_rename, handle_sessions_delete)
+    handle_reveal, handle_session_rename, handle_sessions_delete)
 from server.lifecycle import Lifecycle  # noqa: E402
 from server.live import session_for_pid  # noqa: E402
 from store.layout import ensure_dirs, index_path, server_file  # noqa: E402
@@ -358,6 +358,7 @@ _POST_ROUTES = {
     "/api/auto-memory/discard": handle_auto_memory_discard,
     "/api/config": handle_config_save,
     "/api/config/reset": handle_config_reset,
+    "/api/reveal": handle_reveal,
 }
 
 

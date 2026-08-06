@@ -425,6 +425,38 @@
     setTimeout(() => { button.textContent = was; }, FLASH_MS);
   }
 
+  /* "탐색기에서 보기"와 같은 아이콘(사각+화살표)이다. 여는 대상이 다르다는 것은 이미
+     위치(상단 헤더 vs 대화 머리)와 `title` 문구가 말하므로, 아이콘까지 다른 모양을 쓰면
+     "탐색기로 연다"는 같은 동작에 배워야 할 그림이 둘이 된다. 00-app.js의 ICON_REVEAL과
+     같은 값이지만 상수를 공유하지는 않는다 — 각 자산이 IIFE로 스코프가 갈려 있다 */
+  const ICON_REVEAL = '<path d="M17 13.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5.5"'
+    + ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<path d="M14 3h7v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"'
+    + ' stroke-linejoin="round"/>'
+    + '<path d="M21 3L11 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>';
+
+  /* 모든 세션이 같은 슬러그 디렉토리 아래 있으므로 세션 ID를 서버에 보낼 필요가 없다 —
+     요청은 항상 `{target: 'sessions_dir'}`다. `reveal_supported`가 거짓이거나 읽기
+     전용이면 그리지 않는다(00-app.js의 initReveal과 같은 규칙) */
+  function revealButton() {
+    if (!App.data.reveal_supported || App.readonly) return null;
+    const button = el('button', undefined, 'shead-reveal');
+    button.type = 'button';
+    button.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12"'
+      + ' fill="none" aria-hidden="true">' + ICON_REVEAL + '</svg>';
+    button.title = '세션 폴더 열기';
+    button.setAttribute('aria-label', '세션 폴더 열기');
+    button.addEventListener('click', () => {
+      const token = new URLSearchParams(location.search).get('t') || '';
+      fetch(`/api/reveal?t=${encodeURIComponent(token)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: 'sessions_dir' })
+      }).catch(() => {});
+    });
+    return button;
+  }
+
   function copyButton(id) {
     const button = el('button', '경로 복사', 'shead-copy');
     button.type = 'button';
@@ -459,6 +491,8 @@
     // 화면에 앞자리만 보이는 것은 머리 한 줄이 길어지지 않게 하기 위한 것이고,
     // 복사되는 값과는 무관하다
     line.appendChild(el('span', `${session.id.slice(0, 8)}…`, 'shead-id'));
+    const reveal = revealButton();
+    if (reveal) line.appendChild(reveal);
     line.appendChild(copyButton(session.id));
     head.appendChild(line);
     // 게이지 줄. 응답 기록이 없는 세션에서는 null이므로 아무것도 서지 않는다
