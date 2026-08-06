@@ -1,7 +1,7 @@
 {
   "name": "history",
   "description": "Claude Code 세션 기록을 프로젝트 .history/ 폴더에 모아 브라우저 뷰어에서 열람·정리한다. /history로 기록을 갱신하고 뷰어를 연다.",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "author": {
     "name": "metaontology"
   }

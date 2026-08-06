@@ -107,8 +107,13 @@
    가운데로 모은다 — 왼쪽 정렬이면 제목·시각 칸과 같은 줄로 읽혀 특정 행에
    속한 것처럼 보인다 */
 
+/* text-align: center는 #list의 세로 스크롤바를 뺀 콘텐츠 박스를 기준으로 재는데, 패널의
+   눈에 보이는 중심은 스크롤바까지 포함한 자리다. 그래서 계산상 중앙이어도 왼쪽 공백이
+   더 넓어 보인다(실측 · 0/0.5/1/2/3ch 이동 샘플 비교로 0.5ch를 골랐다). 박스 자체를
+   옮기면 #list의 overflow: auto가 왼쪽으로 스크롤 영역을 만들 수 있어, 오른쪽 패딩만
+   0.5ch의 두 배만큼 늘려 중심점을 옮긴다 — 박스 폭은 그대로다 */
 .slist-foot-note {
-  padding: 10px 14px;
+  padding: 10px calc(14px + 1ch) 10px 14px;
   text-align: center;
   color: var(--muted);
   font-size: 12px;
