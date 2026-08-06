@@ -1,6 +1,6 @@
 /* 세션 축 화면 — 목록 · 대화 · 검색 · 매치 강조 · 원본 경로 복사.
  *
- * 셸에 꽂는 것은 App.provide('s', {list, search, body}) 하나이고, 삭제 계약은
+ * 셸에 꽂는 것은 App.provide('s', {list, search, body, foot}) 하나이고, 삭제 계약은
  * Destructive.register('s', …)로 따로 등록한다. 아무것도 window에 노출하지 않는다.
  */
 (function () {
@@ -238,6 +238,16 @@
   function list() {
     query = '';
     return sessions().map((session) => ({ id: session.id, node: rowNode(session) }));
+  }
+
+  // ── 목록 패널의 꼬리 슬롯 ────────────────────────────────────────────────
+  /* 세션 하나가 비어 있는지로 조건을 걸면 실질적으로 보이지 않는다 — Claude Code는
+     세션을 만든 순간 첫 발언을 함께 적어 entries가 0인 채로 목록에 걸리는 창이 거의
+     없다(실측). 그래서 특정 행이 아니라 **목록 전체의 안내**로 옮긴다. 검색 여부와
+     무관하게 그리는 이유는 00-app.js의 addSlot이 그렇게 정했기 때문이다 —
+     20-viewer/030-auto-memory.md가 먼저 쓴 머리·꼬리 슬롯을 여기서도 그대로 쓴다 */
+  function foot() {
+    return el('div', '세션 대화기록은 30일 이후 자동삭제됩니다.', 'slist-foot-note');
   }
 
   // ── 검색 ─────────────────────────────────────────────────────────────────
@@ -815,7 +825,7 @@
   /* 20-destructive.js와 00-app.js가 파일명 순서로 앞서므로 둘 다 이미 있고,
      셸의 route()는 DOMContentLoaded에서 불리므로 그때는 등록이 끝나 있다 */
 
-  App.provide('s', { list, search, body });
+  App.provide('s', { list, search, body, foot });
 
   Destructive.register('s', {
     endpoint: '/api/sessions/delete',
