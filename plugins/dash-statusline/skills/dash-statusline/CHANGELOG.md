@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0] - 2026-09-16
+
+### Fixed
+- `statuses/telemetry`: 수집이 정상 동작하는데도 `📡 telemetry on` 배지가 표시되지 않던 문제. 판정이 개발자 개인의 설정 스냅샷(9개 항목 전부 정확 일치)을 요구했기 때문이다. 이제 Claude Code 본체와 같은 기준으로 판정한다 — `CLAUDE_CODE_ENABLE_TELEMETRY`가 truthy이고, `OTEL_{LOGS,METRICS,TRACES}_EXPORTER` 중 `none`이 아닌 익스포터가 하나 이상이면 on
+- `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA`를 판정에서 제외. 이 키는 세션 트레이싱(BETA) 전용이고 OTLP 익스포터 생성과 무관하다 — 이것 하나 때문에 나머지 설정이 모두 정상인데도 off로 표시됐다
+- 판정에 박혀 있던 특정 엔드포인트(`OTEL_EXPORTER_OTLP_ENDPOINT`) 제거. 다른 백엔드를 쓰는 사용자는 영구 off였다. `OTEL_EXPORTER_OTLP_PROTOCOL`·`OTEL_LOG_USER_PROMPTS`도 같은 이유로 제외 — 수집의 범위와 전송 방식을 정할 뿐 활성 여부를 가르지 않는다
+- mTLS 인증서(`CLAUDE_CODE_CLIENT_CERT`/`_KEY`)의 파일 존재 검사 제거. mTLS는 특정 엔드포인트의 요구사항이지 텔레메트리 활성 조건이 아니므로, 쓰지 않는 사용자가 영구 off였다
+- truthy 판정을 `'1'` 정확 일치에서 `1`·`true`·`yes`·`on`으로 확대 — 본체의 `isEnvTruthy()`와 같다
+- 설정 경로에 `CLAUDE_CONFIG_DIR` 반영 (`~/.claude` 고정 해제). 1.5.0에서 `_reader.py`에만 적용됐던 것을 맞춘다
+
+### Added
+- `tests/test_telemetry.py` 신규 33개 — `telemetry`를 덮는 첫 테스트 (전체 52 → 85)
+
 ## [1.5.0] - 2026-08-03
 
 ### Changed

@@ -73,7 +73,7 @@ except Exception:
     rendered_lang = '🌍 EN'
 
 # --- 텔레메트리(OTEL) 상태 ---
-# ~/.claude/settings.json의 env 설정만 검사하므로 stdin과 무관하다.
+# 사용자 scope settings.json의 env 설정만 검사하므로 stdin과 무관하다.
 try:
     telemetry_data = telemetry.parse()
     rendered_telemetry = telemetry.render(telemetry_data, palette, view.style)
