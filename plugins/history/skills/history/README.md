@@ -16,6 +16,10 @@ Claude Code 세션의 대화 기록을 프로젝트 `.history/` 폴더에 모아
 
 세션 삭제·정리 명령은 없다. **뷰어 안에서** 한다.
 
+프롬프트에 `hh` · `history` · `히스토리` **한 단어만** 쳐도 `/history`와 같이 동작한다.
+플러그인에 딸린 훅이라 설정할 것이 없고, 설치·업데이트 직후에는 새 세션이나
+`/reload-plugins` 뒤부터 동작한다.
+
 ---
 
 ## 산출물
@@ -55,6 +59,7 @@ Claude Code 세션의 대화 기록을 프로젝트 `.history/` 폴더에 모아
 | 경로 | 역할 |
 |---|---|
 | `SKILL.md` | 스킬 진입점. 사용자 표현을 CLI 인자로 정규화한다 |
+| `hooks/` | 키워드(`hh` · `history` · `히스토리`)를 `/history` 실행으로 잇는 훅 |
 | `scripts/main.py` | 명령 해석 진입점 |
 | `scripts/common/` | 경로 상수, jsonl 탐색·파싱 |
 | `scripts/session/` · `scripts/auto_memory/` | 뷰어가 표시할 값을 뽑는 모델 계층 |
