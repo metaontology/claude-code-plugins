@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.7.0] - 2026-10-01
+
+### Added
+- `statuses/cross_session_name`: 5줄에 이 세션의 교차 세션 주소 `Ⓜ️ 이름 [ref]`를 표시한다. 다른 Claude 세션이 SendMessage로 이 세션을 부를 때 쓰는 값으로, ListAgents 출력과 같다. 출처는 세션 등록부 `~/.claude/sessions/<pid>.json` — stdin `session_id`와 `sessionId`가 같은 항목의 `name`(없으면 cwd 폴더 이름), ref는 sha256(`session:<messagingSocketPath>`) 앞 6자리(Claude Code 2.1.286 기준)
+- stdin의 `session_name`(`/rename` 제목)과는 다른 값이다
+- 못 찾으면 `Ⓜ️ ...`로 줄을 지킨다 — `/clear`·`/resume` 직후 등록부 갱신이 늦으면 한 번 보일 수 있고 다음 갱신에서 맞춰진다. 주소 자체는 `/clear`로 바뀌지 않는다
+- `tests/test_cross_session_name.py` 신규 14개 (전체 85 → 99)
+
+### Changed
+- 출력이 5~6줄에서 6~7줄로 늘었다. 🔧 도구 · 🔔 report가 6 · 7줄로 한 칸씩 내려간다. 세션 주소를 경로 줄에 붙이지 않은 것은 경로·브랜치 길이에 따라 줄바꿈되면 주소가 끊기기 때문이다
+
 ## [1.6.0] - 2026-09-16
 
 ### Fixed

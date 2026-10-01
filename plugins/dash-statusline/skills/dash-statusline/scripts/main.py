@@ -24,27 +24,30 @@ if sys.platform == 'win32':
 
 from statuses import context, model, path, git, tools, report, lang, rate_limits, telemetry
 from statuses import effort as effort_status, thinking as thinking_status
+from statuses import cross_session_name
 from theme import load_theme
 from views import select_view
 
 # [출력 규정]
-# 5~6줄을 출력한다. 단, 6줄(🔔)은 init 상태(내용 없음)일 때 생략한다.
+# 6~7줄을 출력한다. 단, 7줄(🔔)은 init 상태(내용 없음)일 때 생략한다.
 #
-# 줄 배치: 1 게이지(🧩) / 2 턴(🗃) / 3 모델(✨) / 4 경로(📁) / 5 도구(🔧) / 6 report(🔔)
+# 줄 배치: 1 게이지(🧩) / 2 턴(🗃) / 3 모델(✨) / 4 경로(📁) / 5 세션 주소(Ⓜ️) / 6 도구(🔧) / 7 report(🔔)
 #
 # 줄별 의존성:
 #   1~4줄 (🧩/🗃/✨/📁): stdin JSON만으로 렌더링 가능. transcript 없어도 항상 실제 값 표시.
-#   5~6줄 (🔧/🔔): transcript JSONL 파싱 결과. transcript 없거나 파싱 실패 시 기본값 표시.
+#   5줄 (Ⓜ️): stdin session_id + 세션 등록부(~/.claude/sessions/<pid>.json).
+#   6~7줄 (🔧/🔔): transcript JSONL 파싱 결과. transcript 없거나 파싱 실패 시 기본값 표시.
 #
 # 기본값:
-#   5줄: "🔧 | 😎 | 🧊 | 🪚 | 📋"
-#   6줄: report 비어있으면 생략
+#   5줄: "Ⓜ️ ..." — 등록부에서 못 찾아도 줄은 남겨 줄 수가 흔들리지 않게 한다
+#   6줄: "🔧 | 😎 | 🧊 | 🪚 | 📋"
+#   7줄: report 비어있으면 생략
 #
 # [SIGTERM 캐시]
 # Claude Code는 연속 refresh 시 이전 실행에 SIGTERM을 보낸다.
 # SIGTERM 수신 시 cache['output']을 재출력하고 종료.
 # 출력 전에 SIGTERM이 오면 (cache 비어있으면) 아무것도 출력하지 않는다.
-# → 항상 5~6줄 또는 0줄(취소)이 되어 partial 출력이 발생하지 않는다.
+# → 항상 6~7줄 또는 0줄(취소)이 되어 partial 출력이 발생하지 않는다.
 
 cache = {}
 
@@ -149,7 +152,13 @@ except Exception:
     rendered_path = '📁 ...'
     rendered_git = ''
 
-# --- 5~6줄: tools/report (transcript 없으면 기본값) ---
+# --- 세션 주소 줄: ListAgents `이름 [ref]` (못 찾으면 "Ⓜ️ ...") ---
+try:
+    rendered_session = cross_session_name.render(cross_session_name.parse(raw), palette, view.style)
+except Exception:
+    rendered_session = cross_session_name.PLACEHOLDER
+
+# --- 6~7줄: tools/report (transcript 없으면 기본값) ---
 try:
     tools_data = tools.parse(transcript, cwd)
     rendered_tools = tools.render(tools_data, palette, view.style)
@@ -166,6 +175,7 @@ output = view.assemble(
     effort=rendered_effort,
     thinking=rendered_thinking,
     path=rendered_path,
+    session=rendered_session,
     git=rendered_git,
     tools=rendered_tools,
     report=rendered_report,
