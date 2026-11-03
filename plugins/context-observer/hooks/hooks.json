@@ -1,0 +1,4 @@
+{
+  "description": "context-observer: turn.step 이 요청마다 캐시 사용량을, session.measure 가 컨텍스트·사용량 창을 읽는다. 1초 clock.every 가 카운트다운을 돌리고, ui.render 가 입력창 위 두 줄과 /cache 창을 그린다.",
+  "modules": ["./register.tsx"]
+}

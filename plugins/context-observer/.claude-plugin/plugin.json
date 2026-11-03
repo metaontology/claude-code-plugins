@@ -1,0 +1,54 @@
+{
+  "name": "context-observer",
+  "description": "입력창 위에 두 줄을 그리는 mod. cache 줄은 프롬프트 캐시 적중률과 만료·자동 압축까지 남은 시간, context 줄은 컨텍스트 사용률과 5시간·7일 사용량. /cache 는 턴별 캐시 표를 연다.",
+  "version": "0.1.0",
+  "author": {
+    "name": "metaontology"
+  },
+  "license": "MIT",
+  "userConfig": {
+    "ttl": {
+      "type": "string",
+      "title": "Cache lifetime",
+      "description": "How long the cache lives after a request: auto follows Claude Code's own rules (FORCE_PROMPT_CACHING_5M, CLAUDE_CODE_PROMPT_CACHE_TTL, the promptCacheTtl setting, ENABLE_PROMPT_CACHING_1H, then 1 hour on a Claude subscription and 5 minutes on an API key, cloud provider or usage credits) and corrects itself from request timing; 5m or 1h pins it",
+      "default": "auto",
+      "options": ["auto", "5m", "1h"]
+    },
+    "warnSeconds": {
+      "type": "number",
+      "title": "Warn before expiry (s)",
+      "description": "Seconds left on the countdown at which the band turns yellow and a toast reminds you the cache is about to lapse",
+      "default": 60
+    },
+    "compactAtTokens": {
+      "type": "number",
+      "title": "Large context (tokens)",
+      "description": "From this prompt size up, an expired cache suggests /compact (or /clear) before you pay to write the whole prefix again",
+      "default": 100000
+    },
+    "band": {
+      "type": "boolean",
+      "title": "Cache line above the prompt",
+      "description": "Show the cache line above the prompt (the context line always shows)",
+      "default": true
+    },
+    "status": {
+      "type": "boolean",
+      "title": "Status line entry",
+      "description": "Also pin a short entry (hit rate and countdown) under the prompt",
+      "default": false
+    },
+    "toast": {
+      "type": "boolean",
+      "title": "Toast near expiry",
+      "description": "Toasts as the cache lapses: at the warning threshold, then at 10, 3, 2 and 1 seconds, once per cache entry each (only for prompts of 20k tokens or more)",
+      "default": true
+    },
+    "idleCompact": {
+      "type": "boolean",
+      "title": "Idle compaction",
+      "description": "When Claude Code will compact a large conversation by itself before its 1-hour cache lapses (Claude Code 2.1.290+), count down to that moment in the cache line",
+      "default": true
+    }
+  }
+}

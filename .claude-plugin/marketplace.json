@@ -40,6 +40,13 @@
       "source": "./plugins/git",
       "category": "developer-tools",
       "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/git"
+    },
+    {
+      "name": "context-observer",
+      "description": "입력창 위에 cache 줄(캐시 적중률·만료·자동 압축)과 context 줄(컨텍스트·5시간·7일 사용량)을 그리는 mod.",
+      "source": "./plugins/context-observer",
+      "category": "ui",
+      "homepage": "https://github.com/metaontology/claude-code-plugins/tree/main/plugins/context-observer"
     }
   ]
 }
